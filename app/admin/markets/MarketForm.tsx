@@ -217,9 +217,9 @@ export function MarketForm({
             className={inputCls}
           />
         </Field>
-        <Field label="기준 URL" hint="크롤 시작점">
+        <Field label="기준 URL" hint="크롤 시작점 (절대 URL 또는 /view-all 같은 상대경로)">
           <input
-            type="url"
+            type="text"
             value={form.base_url ?? ""}
             onChange={(e) => set("base_url", nullify(e.target.value))}
             className={inputCls}
