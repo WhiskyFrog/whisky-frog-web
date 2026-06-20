@@ -61,6 +61,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/markets/{market_id}/product-urls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Product Urls
+         * @description 마켓이 크롤러로 모은 상품 URL 목록(발견 원장 + 파싱 큐 상태).
+         *
+         *     `id`(발견 순) 오름차순으로 안정 페이지네이션. 마켓 없으면 404.
+         */
+        get: operations["list_product_urls_api_admin_markets__market_id__product_urls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -253,6 +275,38 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * ProductUrlOut
+         * @description 크롤러 ①이 모은 상품 URL 1건(발견 원장 + ②단계 파싱 커서).
+         */
+        ProductUrlOut: {
+            /** Id */
+            id: number;
+            /** Url */
+            url: string;
+            /** Name */
+            name: string | null;
+            /** Stock Status */
+            stock_status: string | null;
+            /** Available */
+            available: boolean;
+            /** Parse Status */
+            parse_status: string;
+            /** Parse Error */
+            parse_error: string | null;
+            /**
+             * First Seen At
+             * Format: date-time
+             */
+            first_seen_at: string;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            /** Last Parsed At */
+            last_parsed_at: string | null;
         };
         /** ShippingOptionIn */
         ShippingOptionIn: {
@@ -473,6 +527,46 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_product_urls_api_admin_markets__market_id__product_urls_get: {
+        parameters: {
+            query?: {
+                /** @description 재고 가용 여부 필터 */
+                available?: boolean | null;
+                /** @description 파싱 상태 필터 */
+                parse_status?: ("pending" | "ok" | "error" | "skipped") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                market_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductUrlOut"][];
+                };
             };
             /** @description Validation Error */
             422: {
