@@ -1,0 +1,28 @@
+# whisky-frog-web (PUBLIC) — 시크릿/빌드 산출물 차단
+# ⚠️ 이 레포는 public. 비밀값·마켓config·세율표 커밋 금지(DECISIONS 021).
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# --- Env (실제 값 차단, 템플릿만 허용) ---
+.env
+.env.local
+.env.prod
+.env.*.local
+.env*
+!.env.example
+
+# --- Vercel ---
+.vercel/
+
+# --- OS / IDE ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
