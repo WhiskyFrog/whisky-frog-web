@@ -41,31 +41,33 @@ export function ExchangeRateMini() {
   }, []);
 
   return (
-    <section className="w-72 rounded-lg border border-gray-200 bg-white/90 shadow-sm backdrop-blur">
-      <header className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
-        <h2 className="text-sm font-semibold text-gray-800">주간 고시환율</h2>
+    <section className="w-72 rounded-lg border border-gray-200 bg-white/90 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/90">
+      <header className="flex items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-gray-800">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          주간 고시환율
+        </h2>
         <Link
           href="/exchange-rates"
-          className="text-xs font-medium text-blue-600 hover:underline"
+          className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
         >
           전체보기 →
         </Link>
       </header>
 
       {status === "loading" && (
-        <div className="px-3 py-6 text-center text-xs text-gray-400">
+        <div className="px-3 py-6 text-center text-xs text-gray-400 dark:text-gray-500">
           불러오는 중…
         </div>
       )}
 
       {status === "error" && (
-        <div className="px-3 py-6 text-center text-xs text-gray-400">
+        <div className="px-3 py-6 text-center text-xs text-gray-400 dark:text-gray-500">
           환율을 불러오지 못했습니다.
         </div>
       )}
 
       {status === "ready" && rows.length === 0 && (
-        <div className="px-3 py-6 text-center text-xs text-gray-400">
+        <div className="px-3 py-6 text-center text-xs text-gray-400 dark:text-gray-500">
           수집된 환율이 없습니다.
         </div>
       )}
@@ -74,12 +76,19 @@ export function ExchangeRateMini() {
         <table className="w-full text-xs">
           <tbody>
             {rows.map((r) => (
-              <tr key={r.currency} className="border-b border-gray-50 last:border-0">
+              <tr
+                key={r.currency}
+                className="border-b border-gray-50 last:border-0 dark:border-gray-800"
+              >
                 <td className="px-3 py-1.5">
-                  <span className="font-medium text-gray-800">{r.currency}</span>
-                  <span className="ml-1 text-gray-400">{r.name}</span>
+                  <span className="font-medium text-gray-800 dark:text-gray-200">
+                    {r.currency}
+                  </span>
+                  <span className="ml-1 text-gray-400 dark:text-gray-500">
+                    {r.name}
+                  </span>
                 </td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-gray-800">
+                <td className="px-3 py-1.5 text-right tabular-nums text-gray-800 dark:text-gray-200">
                   {formatRate(r.rate_krw)}
                 </td>
                 <td className="px-2 py-1.5 text-right">

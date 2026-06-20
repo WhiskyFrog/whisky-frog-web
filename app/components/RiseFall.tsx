@@ -14,7 +14,7 @@ export function RiseFall({
 }) {
   if (prev === null || prev === "") {
     return (
-      <span className="text-gray-400" aria-label="변동 없음">
+      <span className="text-gray-400 dark:text-gray-500" aria-label="변동 없음">
         –
       </span>
     );
@@ -23,7 +23,7 @@ export function RiseFall({
   const p = Number(prev);
   if (Number.isNaN(r) || Number.isNaN(p) || r === p) {
     return (
-      <span className="text-gray-400" aria-label="변동 없음">
+      <span className="text-gray-400 dark:text-gray-500" aria-label="변동 없음">
         –
       </span>
     );
@@ -33,7 +33,7 @@ export function RiseFall({
     magnitude && magnitude.trim() !== "" ? ` ${magnitude.trim()}` : "";
   return (
     <span
-      className={`whitespace-nowrap tabular-nums ${up ? "text-red-600" : "text-blue-600"}`}
+      className={`whitespace-nowrap tabular-nums ${up ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"}`}
       aria-label={up ? "상승" : "하락"}
     >
       {up ? "↑" : "↓"}

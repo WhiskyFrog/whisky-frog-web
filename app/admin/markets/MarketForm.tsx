@@ -56,15 +56,24 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-sm font-medium text-gray-700">{label}</span>
+      <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}
+      </span>
       {children}
-      {hint && <span className="mt-0.5 block text-xs text-gray-400">{hint}</span>}
+      {hint && (
+        <span className="mt-0.5 block text-xs text-gray-400 dark:text-gray-500">
+          {hint}
+        </span>
+      )}
     </label>
   );
 }
 
 const inputCls =
-  "mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm";
+  "mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800";
+
+const checkboxLabelCls =
+  "flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300";
 
 export function MarketForm({
   market,
@@ -135,14 +144,14 @@ export function MarketForm({
         <button
           type="button"
           onClick={onCancel}
-          className="text-sm text-gray-500 hover:text-gray-800"
+          className="text-sm text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
         >
           ← 목록으로
         </button>
       </div>
 
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
           {error}
         </div>
       )}
@@ -245,7 +254,7 @@ export function MarketForm({
             className={inputCls}
           />
         </Field>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className={checkboxLabelCls}>
           <input
             type="checkbox"
             checked={form.price_includes_vat}
@@ -253,7 +262,7 @@ export function MarketForm({
           />
           표시가 부가세 포함 (한국 배송 기준)
         </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className={checkboxLabelCls}>
           <input
             type="checkbox"
             checked={form.price_includes_local_alcohol_tax}
@@ -265,7 +274,7 @@ export function MarketForm({
         </label>
       </section>
 
-      <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
         ⚠️ 면세표기 주의: 같은 상품도 접속국가/배송지에 따라 부가세 포함/제외로 다르게
         표시됩니다. 크롤러는 한국 배송(수출) 기준(crawl_ship_to=KR)으로 접속하므로,
         <b> price_includes_vat</b>는 “한국 배송 기준으로 봤을 때 표시가가 부가세
@@ -310,7 +319,7 @@ export function MarketForm({
           />
         </Field>
         <div className="flex items-end gap-6">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className={checkboxLabelCls}>
             <input
               type="checkbox"
               checked={form.fta}
@@ -318,7 +327,7 @@ export function MarketForm({
             />
             FTA 원산지 (관세 0)
           </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className={checkboxLabelCls}>
             <input
               type="checkbox"
               checked={form.active}
@@ -332,17 +341,21 @@ export function MarketForm({
       {/* 배송옵션 반복행 */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">배송옵션</h3>
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            배송옵션
+          </h3>
           <button
             type="button"
             onClick={addOption}
-            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
           >
             + 행 추가
           </button>
         </div>
         {form.shipping_options.length === 0 ? (
-          <p className="mt-2 text-xs text-gray-400">배송옵션 없음</p>
+          <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+            배송옵션 없음
+          </p>
         ) : (
           <div className="mt-2 space-y-2">
             {form.shipping_options.map((o, i) => (
@@ -351,7 +364,7 @@ export function MarketForm({
                   placeholder="옵션명 (예: Standard)"
                   value={o.name}
                   onChange={(e) => setOption(i, { name: e.target.value })}
-                  className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                  className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800"
                 />
                 <input
                   type="number"
@@ -360,9 +373,9 @@ export function MarketForm({
                   placeholder="배송비"
                   value={o.cost}
                   onChange={(e) => setOption(i, { cost: e.target.value })}
-                  className="w-28 rounded border border-gray-300 px-2 py-1 text-sm"
+                  className="w-28 rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800"
                 />
-                <label className="flex items-center gap-1 text-xs text-gray-600">
+                <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                   <input
                     type="checkbox"
                     checked={o.active}
@@ -375,7 +388,7 @@ export function MarketForm({
                 <button
                   type="button"
                   onClick={() => removeOption(i)}
-                  className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                  className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
                 >
                   삭제
                 </button>
@@ -383,7 +396,7 @@ export function MarketForm({
             ))}
           </div>
         )}
-        <p className="mt-1 text-xs text-gray-400">
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
           저장 시 name 기준으로 전체 동기화됩니다(같은 name 중복 금지). 현지통화 기준
           금액.
         </p>
@@ -402,14 +415,14 @@ export function MarketForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
         >
           {saving ? "저장 중…" : market ? "저장" : "생성"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+          className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
         >
           취소
         </button>
