@@ -3,10 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
 import { MarketForm } from "./MarketForm";
+import { ProductUrlList } from "./ProductUrlList";
 
 type Status = "loading" | "error" | "ready";
-// 목록 보기 | 새 마켓 | 특정 마켓 수정
-type View = { mode: "list" } | { mode: "new" } | { mode: "edit"; market: Market };
+// 목록 보기 | 새 마켓 | 특정 마켓 수정 | 상품 URL 보기
+type View =
+  | { mode: "list" }
+  | { mode: "new" }
+  | { mode: "edit"; market: Market }
+  | { mode: "urls"; market: Market };
 
 export default function MarketsAdminPage() {
   const [status, setStatus] = useState<Status>("loading");
@@ -48,6 +53,15 @@ export default function MarketsAdminPage() {
   function handleFormDone() {
     setView({ mode: "list" });
     load();
+  }
+
+  if (view.mode === "urls") {
+    return (
+      <ProductUrlList
+        market={view.market}
+        onBack={() => setView({ mode: "list" })}
+      />
+    );
   }
 
   if (view.mode !== "list") {
@@ -156,6 +170,12 @@ export default function MarketsAdminPage() {
                     {m.shipping_options.length}
                   </td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => setView({ mode: "urls", market: m })}
+                      className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                    >
+                      상품 URL
+                    </button>
                     <button
                       onClick={() => setView({ mode: "edit", market: m })}
                       className="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"

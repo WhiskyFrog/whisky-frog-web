@@ -139,6 +139,54 @@ export async function deleteMarket(id: number): Promise<void> {
   await ensureOk(res);
 }
 
+// ── 상품 URL (크롤러 ①단계 산출 + ②단계 파싱 큐 상태) — 읽기 전용 ──
+// 계약: GET /api/admin/markets/{market_id}/product-urls → ProductUrlOut[].
+
+/** 파싱 상태 — 백엔드 CHECK 제약과 동일. NULL last_parsed_at = 미파싱(pending). */
+export type ParseStatus = "pending" | "ok" | "error" | "skipped";
+
+/** 크롤러가 수집한 상품 URL 1건 (백엔드 ProductUrlOut 계약과 1:1). */
+export interface ProductUrl {
+  id: number;
+  url: string;
+  name: string | null; // 리스팅 표시명(상세 전 임시값)
+  stock_status: string | null; // 리스팅 재고표기 원문
+  available: boolean; // stock_status에서 도출한 판매가능 정규화
+  parse_status: ParseStatus;
+  parse_error: string | null;
+  first_seen_at: string; // ISO datetime — 최초 발견(불변)
+  last_seen_at: string; // ISO datetime — 재크롤마다 갱신(폐기 감지)
+  last_parsed_at: string | null; // ②가 마지막 상세 파싱한 시각. NULL=미파싱
+}
+
+export interface ProductUrlQuery {
+  available?: boolean; // 재고 가용 필터
+  parse_status?: ParseStatus; // 파싱 상태 필터
+  limit?: number;
+  offset?: number;
+}
+
+/** 마켓이 수집한 상품 URL 목록 조회. id(발견 순) 오름차순. 마켓 없으면 404. */
+export async function listProductUrls(
+  marketId: number,
+  query: ProductUrlQuery = {},
+  signal?: AbortSignal,
+): Promise<ProductUrl[]> {
+  const params = new URLSearchParams();
+  if (query.available !== undefined)
+    params.set("available", String(query.available));
+  if (query.parse_status) params.set("parse_status", query.parse_status);
+  if (query.limit !== undefined) params.set("limit", String(query.limit));
+  if (query.offset !== undefined) params.set("offset", String(query.offset));
+  const qs = params.toString();
+  const res = await fetch(
+    `${base}/${marketId}/product-urls${qs ? `?${qs}` : ""}`,
+    { signal, cache: "no-store", headers: authHeaders() },
+  );
+  await ensureOk(res);
+  return (await res.json()) as ProductUrl[];
+}
+
 /** 새 마켓 폼 기본값 (MarketInput 백엔드 기본값과 일치). */
 export function emptyMarketInput(): MarketInput {
   return {
