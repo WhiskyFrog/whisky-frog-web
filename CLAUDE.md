@@ -11,10 +11,10 @@
 
 ## 컨텍스트 확보 (Option A — 볼트 로컬 참조)
 깊은 프로젝트 맥락은 **private 볼트**에서 읽습니다. 같은 머신에 sibling으로 클론돼 있다고 가정:
-- 볼트 경로: `../whisky-bungee/` (Obsidian 볼트, private)
-- 세션 시작 시 읽기 순서: `../whisky-bungee/HOME.md`(지식 지도) → `CLAUDE.md` → `DECISIONS.md` → `CHECKLIST.md`
-- 프론트 작업 UI 스펙: `../whisky-bungee/docs/handoff-frontend-admin-markets.md`,
-  `../whisky-bungee/docs/handoff-frontend-admin-markets-api.md`
+- 볼트 경로: `../whisky-frog-lab/` (Obsidian 볼트, private)
+- 세션 시작 시 읽기 순서: `../whisky-frog-lab/HOME.md`(지식 지도) → `CLAUDE.md` → `DECISIONS.md` → `CHECKLIST.md`
+- 프론트 작업 UI 스펙: `../whisky-frog-lab/docs/handoff-frontend-admin-markets.md`,
+  `../whisky-frog-lab/docs/handoff-frontend-admin-markets-api.md`
 - ⚠️ 볼트 내용(세금모델·전략·분류기 설계 등)을 **이 public 레포에 복붙 금지.** 읽어서 이해만, 산출물은 코드.
 - 볼트 접근 불가 시 → 메인 오케스트레이터에게 필요한 계약/스펙을 요청.
 
@@ -27,7 +27,7 @@
 ## API 계약 (백엔드와의 유일한 경계)
 - 타입 생성: `npm run gen:api` — 백엔드 로컬 기동 시 `http://localhost:8000/openapi.json` → `app/lib/api/types.gen.ts`.
 - 생성된 `types.gen.ts`를 **커밋** → 계약이 타입체크로 강제됨. 백엔드 API 변경 시 재생성.
-- 사람용 계약 설명서: 볼트 `../whisky-bungee/docs/handoff-frontend-admin-markets-api.md`.
+- 사람용 계약 설명서: 볼트 `../whisky-frog-lab/docs/handoff-frontend-admin-markets-api.md`.
 
 ## 환경변수
 - `NEXT_PUBLIC_API_BASE_URL` — 백엔드(Railway) 공개 URL. 로컬은 `http://localhost:8000`. `.env.example` 참조.
