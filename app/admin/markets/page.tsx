@@ -2,9 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
-import { triggerCrawl } from "../../lib/crawl";
+import { listActiveJobs, triggerCrawl, type ActiveJob } from "../../lib/crawl";
 import { MarketForm } from "./MarketForm";
 import { ProductUrlList } from "./ProductUrlList";
+
+/** 진행 중 잡(ActiveJob.args[0]=도메인)에서 크롤 중인 마켓 도메인 집합 추출. */
+function runningDomainSet(jobs: ActiveJob[]): Set<string> {
+  const s = new Set<string>();
+  for (const j of jobs) {
+    if (
+      j.name === "crawler.collect_market" &&
+      Array.isArray(j.args) &&
+      typeof j.args[0] === "string"
+    ) {
+      s.add(j.args[0]);
+    }
+  }
+  return s;
+}
 
 type Status = "loading" | "error" | "ready";
 // 목록 보기 | 새 마켓 | 특정 마켓 수정 | 상품 URL 보기
@@ -19,7 +34,9 @@ export default function MarketsAdminPage() {
   const [rows, setRows] = useState<Market[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [view, setView] = useState<View>({ mode: "list" });
-  const [crawling, setCrawling] = useState<number | null>(null); // 실행 중인 마켓 id
+  const [crawling, setCrawling] = useState<number | null>(null); // 트리거 요청 in-flight 마켓 id
+  // 현재 크롤 진행 중인 마켓 도메인(버튼 잠금용). 백엔드가 최종 가드지만 UI도 선제 차단.
+  const [runningDomains, setRunningDomains] = useState<Set<string>>(new Set());
 
   const load = useCallback((signal?: AbortSignal) => {
     setStatus("loading");
@@ -40,6 +57,25 @@ export default function MarketsAdminPage() {
     load(controller.signal);
     return () => controller.abort();
   }, [load]);
+
+  // 진행 중 마켓 추적 — 버튼 잠금/해제. 끝나면 자동으로 풀리도록 주기 폴링.
+  const refreshActive = useCallback((signal?: AbortSignal) => {
+    listActiveJobs(signal)
+      .then((jobs) => setRunningDomains(runningDomainSet(jobs)))
+      .catch(() => {
+        /* 워커 무응답 등은 무시(백엔드가 최종 가드) */
+      });
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    refreshActive(controller.signal);
+    const timer = setInterval(() => refreshActive(), 7000);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [refreshActive]);
 
   async function handleDelete(m: Market) {
     if (!window.confirm(`'${m.name}' 마켓을 삭제할까요? (배송옵션도 함께 삭제)`))
@@ -77,11 +113,23 @@ export default function MarketsAdminPage() {
     setCrawling(m.id);
     try {
       await triggerCrawl(m.id, maxPages);
+      // 즉시 잠금(낙관적) + 활성 잡 동기화.
+      setRunningDomains((s) => new Set(s).add(m.domain));
+      refreshActive();
       window.alert(
         `수집 작업을 등록했습니다. '데이터 수집 관리 > 진행 중'에서 상태를 확인하세요.`,
       );
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "수집 실행 실패");
+      const msg = err instanceof Error ? err.message : "수집 실행 실패";
+      // 409: 이미 진행 중(연타 방지) → 에러 대신 안내하고 버튼 잠금.
+      if (/already running|진행 중|409/i.test(msg)) {
+        setRunningDomains((s) => new Set(s).add(m.domain));
+        window.alert(
+          "이미 이 마켓 수집이 진행 중입니다. '데이터 수집 관리 > 진행 중'에서 확인하세요.",
+        );
+      } else {
+        window.alert(msg);
+      }
     } finally {
       setCrawling(null);
     }
@@ -204,10 +252,14 @@ export default function MarketsAdminPage() {
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     <button
                       onClick={() => handleCrawl(m)}
-                      disabled={crawling === m.id}
+                      disabled={crawling === m.id || runningDomains.has(m.domain)}
                       className="rounded px-2 py-1 text-xs text-green-700 hover:bg-green-50 disabled:opacity-40 dark:text-green-400 dark:hover:bg-green-950/40"
                     >
-                      {crawling === m.id ? "실행 중…" : "수집 실행"}
+                      {crawling === m.id
+                        ? "실행 중…"
+                        : runningDomains.has(m.domain)
+                          ? "진행 중"
+                          : "수집 실행"}
                     </button>
                     <button
                       onClick={() => setView({ mode: "urls", market: m })}
