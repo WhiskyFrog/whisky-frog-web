@@ -2,22 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
-import { listActiveJobs, triggerCrawl, type ActiveJob } from "../../lib/crawl";
+import { listCrawlHistory, triggerCrawl, type CrawlJob } from "../../lib/crawl";
 import { MarketForm } from "./MarketForm";
 import { ProductUrlList } from "./ProductUrlList";
 import { actionBtn } from "../../components/actionButton";
 
-/** 진행 중 잡(ActiveJob.args[0]=도메인)에서 크롤 중인 마켓 도메인 집합 추출. */
-function runningDomainSet(jobs: ActiveJob[]): Set<string> {
+/** 진행 중(running) 잡에서 크롤 중인 마켓 도메인 집합 추출.
+ *  소스 = DB 원장(history?status=running) — 라이브 워커 inspect는 간헐 빈응답으로 깜빡임. */
+function runningDomainSet(jobs: CrawlJob[]): Set<string> {
   const s = new Set<string>();
   for (const j of jobs) {
-    if (
-      j.name === "crawler.collect_market" &&
-      Array.isArray(j.args) &&
-      typeof j.args[0] === "string"
-    ) {
-      s.add(j.args[0]);
-    }
+    if (j.domain) s.add(j.domain);
   }
   return s;
 }
@@ -59,19 +54,19 @@ export default function MarketsAdminPage() {
     return () => controller.abort();
   }, [load]);
 
-  // 진행 중 마켓 추적 — 버튼 잠금/해제. 끝나면 자동으로 풀리도록 주기 폴링.
+  // 진행 중 마켓 추적 — 버튼 잠금/해제. 끝나면 자동으로 풀리도록 주기 폴링(DB 원장 기반).
   const refreshActive = useCallback((signal?: AbortSignal) => {
-    listActiveJobs(signal)
+    listCrawlHistory({ status: "running", limit: 200 }, signal)
       .then((jobs) => setRunningDomains(runningDomainSet(jobs)))
       .catch(() => {
-        /* 워커 무응답 등은 무시(백엔드가 최종 가드) */
+        /* 조회 실패는 무시(백엔드 락/409가 최종 가드) */
       });
   }, []);
 
   useEffect(() => {
     const controller = new AbortController();
     refreshActive(controller.signal);
-    const timer = setInterval(() => refreshActive(), 7000);
+    const timer = setInterval(() => refreshActive(), 15000);
     return () => {
       controller.abort();
       clearInterval(timer);

@@ -4,11 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listMarkets, type Market } from "../../lib/markets";
 import { actionBtn } from "../../components/actionButton";
 import {
-  listActiveJobs,
   listCrawlHistory,
   listSchedule,
   revokeJob,
-  type ActiveJob,
   type CrawlJob,
   type CrawlStatus,
   type ScheduleEntry,
@@ -18,7 +16,9 @@ type Tab = "active" | "history" | "schedule";
 type Status = "loading" | "error" | "ready";
 
 const PAGE_SIZE = 50;
-const POLL_MS = 4000; // 진행 중 탭 자동 새로고침 주기
+// 진행 중 탭 자동 새로고침 주기. DB 원장(history?status=running) 기반이라 라이브 inspect보다
+// 안정적 → 잦게 칠 필요 없음(라이브 inspect 권장 3~5초 대비 완화).
+const POLL_MS = 10000;
 
 const HISTORY_STATUSES: CrawlStatus[] = [
   "running",
@@ -111,15 +111,17 @@ export default function CrawlsAdminPage() {
 }
 
 // ── 진행 중 ──────────────────────────────────────────────
+// 데이터 소스 = DB 원장(history?status=running). 라이브 워커 inspect(/crawl/jobs)는
+// 워커가 바쁘면 간헐적으로 빈 응답을 주어 "있었다 없었다" 깜빡임이 생기므로 쓰지 않는다.
 function ActiveTab() {
   const [status, setStatus] = useState<Status>("loading");
-  const [rows, setRows] = useState<ActiveJob[]>([]);
+  const [rows, setRows] = useState<CrawlJob[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [, setTick] = useState(0); // 경과시간 라이브 갱신용 리렌더 트리거
   const [busy, setBusy] = useState<string | null>(null); // revoke 진행 중 task_id
 
   const load = useCallback((signal?: AbortSignal) => {
-    listActiveJobs(signal)
+    listCrawlHistory({ status: "running", limit: 100 }, signal)
       .then((data) => {
         setRows(data);
         setStatus("ready");
@@ -182,13 +184,12 @@ function ActiveTab() {
   return (
     <div className="overflow-x-auto">
       <div className="mb-2 text-xs text-gray-400 dark:text-gray-500">
-        ↻ {POLL_MS / 1000}초마다 자동 새로고침
+        ↻ {POLL_MS / 1000}초마다 자동 새로고침 · 상태 원장(running) 기준
       </div>
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b-2 border-gray-300 text-left text-gray-600 dark:border-gray-600 dark:text-gray-400">
-            <th className="px-3 py-2 font-medium">작업</th>
-            <th className="px-3 py-2 font-medium">워커</th>
+            <th className="px-3 py-2 font-medium">작업 / 도메인</th>
             <th className="px-3 py-2 font-medium">시작시각</th>
             <th className="px-3 py-2 font-medium">경과</th>
             <th className="px-3 py-2 text-right font-medium">동작</th>
@@ -203,13 +204,15 @@ function ActiveTab() {
               <td className="px-3 py-2">
                 <div className="font-medium text-gray-900 dark:text-gray-100">
                   {j.name}
+                  {j.domain && (
+                    <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">
+                      · {j.domain}
+                    </span>
+                  )}
                 </div>
                 <div className="font-mono text-[11px] text-gray-400 dark:text-gray-500">
                   {j.task_id}
                 </div>
-              </td>
-              <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
-                {j.worker}
               </td>
               <td className="px-3 py-2 whitespace-nowrap text-gray-600 dark:text-gray-400">
                 {formatDateTime(j.started_at)}
