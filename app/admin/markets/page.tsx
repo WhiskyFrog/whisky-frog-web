@@ -5,6 +5,7 @@ import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
 import { listActiveJobs, triggerCrawl, type ActiveJob } from "../../lib/crawl";
 import { MarketForm } from "./MarketForm";
 import { ProductUrlList } from "./ProductUrlList";
+import { actionBtn } from "../../components/actionButton";
 
 /** 진행 중 잡(ActiveJob.args[0]=도메인)에서 크롤 중인 마켓 도메인 집합 추출. */
 function runningDomainSet(jobs: ActiveJob[]): Set<string> {
@@ -249,36 +250,40 @@ export default function MarketsAdminPage() {
                   <td className="px-3 py-2 text-center text-gray-500 dark:text-gray-400">
                     {m.shipping_options.length}
                   </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
-                    <button
-                      onClick={() => handleCrawl(m)}
-                      disabled={crawling === m.id || runningDomains.has(m.domain)}
-                      className="rounded px-2 py-1 text-xs text-green-700 hover:bg-green-50 disabled:opacity-40 dark:text-green-400 dark:hover:bg-green-950/40"
-                    >
-                      {crawling === m.id
-                        ? "실행 중…"
-                        : runningDomains.has(m.domain)
-                          ? "진행 중"
-                          : "수집 실행"}
-                    </button>
-                    <button
-                      onClick={() => setView({ mode: "urls", market: m })}
-                      className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                    >
-                      상품 URL
-                    </button>
-                    <button
-                      onClick={() => setView({ mode: "edit", market: m })}
-                      className="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"
-                    >
-                      수정
-                    </button>
-                    <button
-                      onClick={() => handleDelete(m)}
-                      className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
-                    >
-                      삭제
-                    </button>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        onClick={() => handleCrawl(m)}
+                        disabled={
+                          crawling === m.id || runningDomains.has(m.domain)
+                        }
+                        className={actionBtn.run}
+                      >
+                        {crawling === m.id
+                          ? "실행 중…"
+                          : runningDomains.has(m.domain)
+                            ? "진행 중"
+                            : "수집 실행"}
+                      </button>
+                      <button
+                        onClick={() => setView({ mode: "urls", market: m })}
+                        className={actionBtn.neutral}
+                      >
+                        상품 URL
+                      </button>
+                      <button
+                        onClick={() => setView({ mode: "edit", market: m })}
+                        className={actionBtn.edit}
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => handleDelete(m)}
+                        className={actionBtn.danger}
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listMarkets, type Market } from "../../lib/markets";
+import { actionBtn } from "../../components/actionButton";
 import {
   listActiveJobs,
   listCrawlHistory,
@@ -216,21 +217,23 @@ function ActiveTab() {
               <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-600 dark:text-gray-400">
                 {formatDuration(j.started_at, null)}
               </td>
-              <td className="px-3 py-2 text-right whitespace-nowrap">
-                <button
-                  onClick={() => handleRevoke(j.task_id, false)}
-                  disabled={busy === j.task_id}
-                  className="rounded px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 disabled:opacity-40 dark:text-amber-300 dark:hover:bg-amber-950/40"
-                >
-                  종료
-                </button>
-                <button
-                  onClick={() => handleRevoke(j.task_id, true)}
-                  disabled={busy === j.task_id}
-                  className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950/40"
-                >
-                  강제 종료
-                </button>
+              <td className="px-3 py-2 whitespace-nowrap">
+                <div className="flex justify-end gap-1.5">
+                  <button
+                    onClick={() => handleRevoke(j.task_id, false)}
+                    disabled={busy === j.task_id}
+                    className={actionBtn.warn}
+                  >
+                    종료
+                  </button>
+                  <button
+                    onClick={() => handleRevoke(j.task_id, true)}
+                    disabled={busy === j.task_id}
+                    className={actionBtn.danger}
+                  >
+                    강제 종료
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
