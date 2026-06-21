@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
+import { triggerCrawl } from "../../lib/crawl";
 import { MarketForm } from "./MarketForm";
 import { ProductUrlList } from "./ProductUrlList";
 
@@ -18,6 +19,7 @@ export default function MarketsAdminPage() {
   const [rows, setRows] = useState<Market[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [view, setView] = useState<View>({ mode: "list" });
+  const [crawling, setCrawling] = useState<number | null>(null); // 실행 중인 마켓 id
 
   const load = useCallback((signal?: AbortSignal) => {
     setStatus("loading");
@@ -53,6 +55,36 @@ export default function MarketsAdminPage() {
   function handleFormDone() {
     setView({ mode: "list" });
     load();
+  }
+
+  async function handleCrawl(m: Market) {
+    // 빈 입력=전체 수집 / 숫자 입력=스모크(해당 페이지 수만). CrawlIn.max_pages 계약.
+    const ans = window.prompt(
+      `'${m.name}' 수집을 실행합니다.\n전체 수집은 비워두고 확인, 스모크는 페이지 수(예: 1)를 입력하세요.\n취소하려면 Esc.`,
+      "",
+    );
+    if (ans === null) return; // 취소
+    const trimmed = ans.trim();
+    let maxPages: number | undefined;
+    if (trimmed !== "") {
+      const n = Number(trimmed);
+      if (!Number.isInteger(n) || n <= 0) {
+        window.alert("페이지 수는 1 이상의 정수여야 합니다.");
+        return;
+      }
+      maxPages = n;
+    }
+    setCrawling(m.id);
+    try {
+      await triggerCrawl(m.id, maxPages);
+      window.alert(
+        `수집 작업을 등록했습니다. '데이터 수집 관리 > 진행 중'에서 상태를 확인하세요.`,
+      );
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "수집 실행 실패");
+    } finally {
+      setCrawling(null);
+    }
   }
 
   if (view.mode === "urls") {
@@ -170,6 +202,13 @@ export default function MarketsAdminPage() {
                     {m.shipping_options.length}
                   </td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => handleCrawl(m)}
+                      disabled={crawling === m.id}
+                      className="rounded px-2 py-1 text-xs text-green-700 hover:bg-green-50 disabled:opacity-40 dark:text-green-400 dark:hover:bg-green-950/40"
+                    >
+                      {crawling === m.id ? "실행 중…" : "수집 실행"}
+                    </button>
                     <button
                       onClick={() => setView({ mode: "urls", market: m })}
                       className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
