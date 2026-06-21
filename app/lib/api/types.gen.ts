@@ -83,6 +83,139 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/markets/{market_id}/crawl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Crawl
+         * @description 마켓의 상품 URL 크롤을 **비동기로 트리거**(관리 UI 버튼용).
+         *
+         *     크롤은 robots Crawl-delay(사이트별)로 길어질 수 있어 동기 실행하지 않고 Celery로
+         *     enqueue하고 즉시 202+`task_id`를 반환한다. 실제 수집·UPSERT는 워커(크롤러 ①)가 수행.
+         *
+         *     가드(handoff-api-crawl-trigger):
+         *     - 어댑터 없는 마켓 → 400, 없는 마켓 → 404.
+         *     - 이미 진행 중(Redis 락 보유)이면 → 409 (연타 시 큐 쌓임 방지). 최종 보장은 워커의 태스크 락.
+         */
+        post: operations["trigger_crawl_api_admin_markets__market_id__crawl_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/crawl/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Active Jobs
+         * @description 진행 중인 모든 크롤 잡(요구사항 #1). 워커가 없거나 응답이 없으면 빈 목록.
+         */
+        get: operations["list_active_jobs_api_admin_crawl_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/crawl/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Schedule
+         * @description 등록된 정기 크롤 스케줄 목록(요구사항 #3). beat 정적 정의에서 읽는다.
+         */
+        get: operations["list_schedule_api_admin_crawl_schedule_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/crawl/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List History
+         * @description 완료/진행 크롤 잡 이력(요구사항 #2) — 최근 실행 순(id 내림차순).
+         *
+         *     각 행에 실행 시각(`started_at`)·완료 시각(`finished_at`)·상태·적재 건수가 담긴다.
+         *     워커의 Celery signals(`crawl_ledger`)가 적재한 `crawl_jobs` 원장을 조회한다.
+         */
+        get: operations["list_history_api_admin_crawl_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/crawl/jobs/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Job Status
+         * @description 단일 크롤 잡 상태/결과(트리거 후 폴링용). 결과 백엔드에서 조회.
+         */
+        get: operations["get_job_status_api_admin_crawl_jobs__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/crawl/jobs/{task_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Job
+         * @description 진행 중인 크롤 잡 종료(요구사항 #4).
+         *
+         *     `terminate=True`면 실행 중 워커 프로세스에 SIGTERM을 보내 즉시 중단,
+         *     `False`면 아직 시작 안 한 잡만 취소(실행 중인 건 두고 재실행 방지). 비동기 fire-and-forget.
+         */
+        post: operations["revoke_job_api_admin_crawl_jobs__task_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -125,6 +258,86 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * ActiveJob
+         * @description 진행 중인 크롤 잡 1건(워커에서 실행 중).
+         */
+        ActiveJob: {
+            /** Task Id */
+            task_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Args
+             * @default []
+             */
+            args: unknown[];
+            /**
+             * Kwargs
+             * @default {}
+             */
+            kwargs: Record<string, never>;
+            /** Worker */
+            worker: string;
+            /** Started At */
+            started_at?: string | null;
+        };
+        /**
+         * CrawlIn
+         * @description 크롤 트리거 옵션. `max_pages`로 스모크(예: 1페이지=24건)만 돌릴 수 있다.
+         */
+        CrawlIn: {
+            /** Max Pages */
+            max_pages?: number | null;
+        };
+        /**
+         * CrawlJobOut
+         * @description 완료/진행 크롤 잡 이력 1건(`crawl_jobs` 원장).
+         */
+        CrawlJobOut: {
+            /** Id */
+            id: number;
+            /** Task Id */
+            task_id: string;
+            /** Name */
+            name: string;
+            /** Domain */
+            domain: string | null;
+            /** Status */
+            status: string;
+            /** Args */
+            args: string | null;
+            /** Result Count */
+            result_count: number | null;
+            /** Error */
+            error: string | null;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * CrawlTriggerOut
+         * @description 크롤 트리거 응답 — 비동기 enqueue 결과(즉시 반환).
+         */
+        CrawlTriggerOut: {
+            /** Task Id */
+            task_id: string;
+            /** Market Id */
+            market_id: number;
+            /** Domain */
+            domain: string;
+            /**
+             * Status
+             * @default queued
+             */
+            status: string;
+        };
+        /**
          * ExchangeRateOut
          * @description 환율 응답 계약 한 행.
          */
@@ -154,6 +367,15 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** JobStatusOut */
+        JobStatusOut: {
+            /** Task Id */
+            task_id: string;
+            /** State */
+            state: string;
+            /** Result */
+            result?: unknown | null;
         };
         /**
          * MarketIn
@@ -307,6 +529,30 @@ export interface components {
             last_seen_at: string;
             /** Last Parsed At */
             last_parsed_at: string | null;
+        };
+        /** RevokeOut */
+        RevokeOut: {
+            /** Task Id */
+            task_id: string;
+            /**
+             * Revoked
+             * @default true
+             */
+            revoked: boolean;
+            /** Terminated */
+            terminated: boolean;
+        };
+        /**
+         * ScheduleEntry
+         * @description beat 스케줄 1건(정기 크롤 예정).
+         */
+        ScheduleEntry: {
+            /** Name */
+            name: string;
+            /** Task */
+            task: string;
+            /** Schedule */
+            schedule: string;
         };
         /** ShippingOptionIn */
         ShippingOptionIn: {
@@ -566,6 +812,211 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductUrlOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_crawl_api_admin_markets__market_id__crawl_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                market_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CrawlIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrawlTriggerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_active_jobs_api_admin_crawl_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveJob"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_schedule_api_admin_crawl_schedule_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleEntry"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_history_api_admin_crawl_history_get: {
+        parameters: {
+            query?: {
+                /** @description 도메인 필터 */
+                domain?: string | null;
+                /** @description 상태 필터 */
+                status?: ("running" | "success" | "failure" | "revoked") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrawlJobOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_status_api_admin_crawl_jobs__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_job_api_admin_crawl_jobs__task_id__revoke_post: {
+        parameters: {
+            query?: {
+                terminate?: boolean;
+            };
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeOut"];
                 };
             };
             /** @description Validation Error */

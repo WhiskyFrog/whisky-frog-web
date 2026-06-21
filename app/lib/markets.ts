@@ -2,7 +2,7 @@
 // 계약: docs/handoff-frontend-admin-markets-api.md (구현 backend/app/api/admin_markets.py).
 // 금액/세율 Decimal은 정밀도 보존 위해 JSON에서 "문자열"로 오간다.
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 /** 백엔드 ADMIN_API_TOKEN이 설정된 경우 X-Admin-Token 헤더로 실어 보낸다.
@@ -56,7 +56,7 @@ export interface Market extends MarketInput {
   updated_at: string;
 }
 
-function authHeaders(json = false): HeadersInit {
+export function authHeaders(json = false): HeadersInit {
   const headers: Record<string, string> = {};
   if (json) headers["Content-Type"] = "application/json";
   const token = getAdminToken();
@@ -65,7 +65,7 @@ function authHeaders(json = false): HeadersInit {
 }
 
 /** 응답을 검사하고 실패 시 detail 메시지로 throw. */
-async function ensureOk(res: Response): Promise<void> {
+export async function ensureOk(res: Response): Promise<void> {
   if (res.ok) return;
   let detail = `HTTP ${res.status}`;
   try {

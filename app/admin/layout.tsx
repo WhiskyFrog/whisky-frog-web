@@ -6,7 +6,10 @@ import { useEffect, useState } from "react";
 import { getAdminToken, setAdminToken } from "../lib/markets";
 
 /** 좌측 사이드바 메뉴. 첫 항목 = 마켓 관리. 이후 항목은 여기에 추가. */
-const MENU = [{ href: "/admin/markets", label: "마켓 관리" }];
+const MENU = [
+  { href: "/admin/markets", label: "마켓 관리" },
+  { href: "/admin/crawls", label: "데이터 수집 관리" },
+];
 
 export default function AdminLayout({
   children,
