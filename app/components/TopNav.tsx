@@ -1,13 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { listMarkets, type Market } from "../lib/markets";
+import { isAuthed } from "../lib/auth";
+import { LoginModal } from "./LoginModal";
 
 /** 홈 상단 메뉴 바. "마켓" 호버 시 등록된 마켓 드롭다운, 우측 끝 관리자 버튼. */
 export function TopNav() {
+  const router = useRouter();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+
+  // 관리자 버튼: 이미 로그인돼 있으면 바로 이동, 아니면 로그인 모달.
+  function handleAdminClick() {
+    if (isAuthed()) router.push("/admin");
+    else setShowLogin(true);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,12 +80,22 @@ export function TopNav() {
         </div>
       </div>
 
-      <Link
-        href="/admin"
+      <button
+        onClick={handleAdminClick}
         className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
       >
         관리자
-      </Link>
+      </button>
+
+      {showLogin && (
+        <LoginModal
+          onClose={() => setShowLogin(false)}
+          onSuccess={() => {
+            setShowLogin(false);
+            router.push("/admin");
+          }}
+        />
+      )}
     </nav>
   );
 }

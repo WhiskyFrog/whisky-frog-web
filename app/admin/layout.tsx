@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getAdminToken, setAdminToken } from "../lib/markets";
+import { isAuthed, logout } from "../lib/auth";
 
 /** 좌측 사이드바 메뉴. 첫 항목 = 마켓 관리. 이후 항목은 여기에 추가. */
 const MENU = [
@@ -17,19 +17,33 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [token, setToken] = useState("");
+  const router = useRouter();
   // 모바일 드로어 열림 상태(데스크톱 md+ 에선 무시됨).
   const [navOpen, setNavOpen] = useState(false);
+  // 인증 확인 전 깜빡임 방지 게이트.
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // 저장된 관리자 토큰 로드(브라우저에서만).
+  // 인증 가드 — 토큰 없으면 홈으로(로그인은 홈 상단 관리자 버튼에서). 최종 강제는 백엔드 401.
   useEffect(() => {
-    setToken(getAdminToken());
-  }, []);
+    if (!isAuthed()) {
+      router.replace("/");
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
 
   // 라우트 이동 시 모바일 드로어 자동 닫기.
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
+
+  function handleLogout() {
+    logout();
+    router.replace("/");
+  }
+
+  // 미인증이면 리다이렉트 진행 중 — 내용 렌더 안 함.
+  if (!authChecked) return null;
 
   return (
     <div className="flex min-h-screen">
@@ -128,22 +142,15 @@ export default function AdminLayout({
           })}
         </nav>
 
-        {/* 관리자 토큰 — 백엔드 ADMIN_API_TOKEN 설정 시 필요. 로컬은 비워둬도 됨. */}
+        {/* 로그아웃 — JWT 폐기 후 홈으로. */}
         <div className="border-t border-gray-200 px-3 py-3 dark:border-gray-800">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
-            관리자 토큰
-          </label>
-          <input
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            onBlur={() => setAdminToken(token.trim())}
-            placeholder="로컬은 비워둠"
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800"
-          />
-          <p className="mt-1 text-[10px] leading-tight text-gray-400 dark:text-gray-500">
-            입력 후 포커스 해제 시 이 브라우저에 저장됩니다.
-          </p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            로그아웃
+          </button>
         </div>
       </aside>
 

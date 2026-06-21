@@ -1,9 +1,9 @@
 // 데이터 수집(크롤) 관리 API 클라이언트 — Celery 기반.
 // 계약: GET /api/admin/crawl/{jobs,history,schedule}, POST .../jobs/{task_id}/revoke,
 //       POST /api/admin/markets/{market_id}/crawl. (운영 OpenAPI 기준)
-// 인증·기반 URL은 markets.ts 공통 헬퍼 재사용.
+// 인증·기반 URL은 auth.ts 공통 헬퍼 재사용.
 
-import { API_BASE_URL, authHeaders, ensureOk } from "./markets";
+import { API_BASE_URL, authHeaders, ensureOk } from "./auth";
 
 const base = `${API_BASE_URL}/api/admin/crawl`;
 

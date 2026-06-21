@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description 관리자 로그인 → JWT 발급. 자격 불일치는 일반화된 401(사용자 열거 방지).
+         */
+        post: operations["login_api_admin_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/markets": {
         parameters: {
             query?: never;
@@ -377,6 +397,13 @@ export interface components {
             /** Result */
             result?: unknown | null;
         };
+        /** LoginIn */
+        LoginIn: {
+            /** Username */
+            username: string;
+            /** Password */
+            password: string;
+        };
         /**
          * MarketIn
          * @description 마켓 생성/수정 입력. 배송옵션은 nested(전체 동기화).
@@ -580,6 +607,18 @@ export interface components {
             /** Id */
             id: number;
         };
+        /** TokenOut */
+        TokenOut: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            /** Expires In */
+            expires_in: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -618,12 +657,43 @@ export interface operations {
             };
         };
     };
+    login_api_admin_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_markets_api_admin_markets_get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -638,23 +708,12 @@ export interface operations {
                     "application/json": components["schemas"]["MarketOut"][];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     create_market_api_admin_markets_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -687,9 +746,7 @@ export interface operations {
     get_market_api_admin_markets__market_id__get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path: {
                 market_id: number;
             };
@@ -720,9 +777,7 @@ export interface operations {
     update_market_api_admin_markets__market_id__put: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path: {
                 market_id: number;
             };
@@ -757,9 +812,7 @@ export interface operations {
     delete_market_api_admin_markets__market_id__delete: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path: {
                 market_id: number;
             };
@@ -795,9 +848,7 @@ export interface operations {
                 limit?: number;
                 offset?: number;
             };
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path: {
                 market_id: number;
             };
@@ -828,9 +879,7 @@ export interface operations {
     trigger_crawl_api_admin_markets__market_id__crawl_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path: {
                 market_id: number;
             };
@@ -865,9 +914,7 @@ export interface operations {
     list_active_jobs_api_admin_crawl_jobs_get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -882,23 +929,12 @@ export interface operations {
                     "application/json": components["schemas"]["ActiveJob"][];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     list_schedule_api_admin_crawl_schedule_get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -913,15 +949,6 @@ export interface operations {
                     "application/json": components["schemas"]["ScheduleEntry"][];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     list_history_api_admin_crawl_history_get: {
@@ -934,9 +961,7 @@ export interface operations {
                 limit?: number;
                 offset?: number;
             };
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -965,9 +990,7 @@ export interface operations {
     get_job_status_api_admin_crawl_jobs__task_id__get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path: {
                 task_id: string;
             };
@@ -1000,9 +1023,7 @@ export interface operations {
             query?: {
                 terminate?: boolean;
             };
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path: {
                 task_id: string;
             };

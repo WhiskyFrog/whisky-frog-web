@@ -1,24 +1,9 @@
 // 마켓 관리(admin) CRUD API 클라이언트.
 // 계약: docs/handoff-frontend-admin-markets-api.md (구현 backend/app/api/admin_markets.py).
 // 금액/세율 Decimal은 정밀도 보존 위해 JSON에서 "문자열"로 오간다.
+// 인증(JWT Bearer)·기반 URL·에러 처리는 auth.ts 공통 헬퍼 사용.
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-
-/** 백엔드 ADMIN_API_TOKEN이 설정된 경우 X-Admin-Token 헤더로 실어 보낸다.
- *  로컬(미설정)에선 없어도 통과. 토큰은 관리화면에서 localStorage에 보관. */
-const TOKEN_KEY = "wb_admin_token";
-
-export function getAdminToken(): string {
-  if (typeof window === "undefined") return "";
-  return window.localStorage.getItem(TOKEN_KEY) ?? "";
-}
-
-export function setAdminToken(token: string): void {
-  if (typeof window === "undefined") return;
-  if (token) window.localStorage.setItem(TOKEN_KEY, token);
-  else window.localStorage.removeItem(TOKEN_KEY);
-}
+import { API_BASE_URL, authHeaders, ensureOk } from "./auth";
 
 export interface ShippingOption {
   id?: number; // 응답에만 존재
@@ -56,38 +41,7 @@ export interface Market extends MarketInput {
   updated_at: string;
 }
 
-export function authHeaders(json = false): HeadersInit {
-  const headers: Record<string, string> = {};
-  if (json) headers["Content-Type"] = "application/json";
-  const token = getAdminToken();
-  if (token) headers["X-Admin-Token"] = token;
-  return headers;
-}
-
-/** 응답을 검사하고 실패 시 detail 메시지로 throw. */
-export async function ensureOk(res: Response): Promise<void> {
-  if (res.ok) return;
-  let detail = `HTTP ${res.status}`;
-  try {
-    const body = await res.json();
-    if (typeof body?.detail === "string") detail = body.detail;
-    else if (Array.isArray(body?.detail)) {
-      // FastAPI 422 검증 오류
-      detail = body.detail
-        .map((e: { loc?: unknown[]; msg?: string }) => {
-          const field = Array.isArray(e.loc) ? e.loc.slice(1).join(".") : "";
-          return field ? `${field}: ${e.msg}` : e.msg;
-        })
-        .join(", ");
-    }
-  } catch {
-    /* 본문 없음 */
-  }
-  if (res.status === 401) detail = "관리자 토큰이 필요하거나 올바르지 않습니다.";
-  throw new Error(detail);
-}
-
-const base = `${API_BASE_URL}/api/admin/markets`;
+export const base = `${API_BASE_URL}/api/admin/markets`;
 
 export async function listMarkets(signal?: AbortSignal): Promise<Market[]> {
   const res = await fetch(base, {
