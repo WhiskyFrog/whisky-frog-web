@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
-import { listCrawlHistory, triggerCrawl, type CrawlJob } from "../../lib/crawl";
+import {
+  listCrawlHistory,
+  triggerCrawl,
+  triggerParse,
+  type CrawlJob,
+} from "../../lib/crawl";
 import { MarketForm } from "./MarketForm";
 import { ProductUrlList } from "./ProductUrlList";
 import { actionBtn } from "../../components/actionButton";
@@ -30,7 +35,8 @@ export default function MarketsAdminPage() {
   const [rows, setRows] = useState<Market[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [view, setView] = useState<View>({ mode: "list" });
-  const [crawling, setCrawling] = useState<number | null>(null); // 트리거 요청 in-flight 마켓 id
+  const [crawling, setCrawling] = useState<number | null>(null); // 수집 트리거 in-flight 마켓 id
+  const [parsing, setParsing] = useState<number | null>(null); // 상세 파싱 트리거 in-flight 마켓 id
   // 현재 크롤 진행 중인 마켓 도메인(버튼 잠금용). 백엔드가 최종 가드지만 UI도 선제 차단.
   const [runningDomains, setRunningDomains] = useState<Set<string>>(new Set());
 
@@ -128,6 +134,48 @@ export default function MarketsAdminPage() {
       }
     } finally {
       setCrawling(null);
+    }
+  }
+
+  async function handleParse(m: Market) {
+    // 빈 입력=미파싱 전체 / 숫자 입력=이번 런 처리 수 제한. ParseIn.limit 계약.
+    const ans = window.prompt(
+      `'${m.name}' 상세 파싱(stage-2)을 실행합니다.\n전체는 비워두고 확인, 일부만 처리하려면 건수(예: 50)를 입력하세요.\n취소하려면 Esc.`,
+      "",
+    );
+    if (ans === null) return; // 취소
+    const trimmed = ans.trim();
+    let limit: number | undefined;
+    if (trimmed !== "") {
+      const n = Number(trimmed);
+      if (!Number.isInteger(n) || n <= 0) {
+        window.alert("건수는 1 이상의 정수여야 합니다.");
+        return;
+      }
+      limit = n;
+    }
+    setParsing(m.id);
+    try {
+      await triggerParse(m.id, limit);
+      // 파싱은 수집과 같은 마켓 락을 공유 → 낙관적 잠금 + 활성 잡 동기화.
+      setRunningDomains((s) => new Set(s).add(m.domain));
+      refreshActive();
+      window.alert(
+        `상세 파싱 작업을 등록했습니다. '데이터 수집 관리 > 진행 중'에서 상태를 확인하세요.`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "상세 파싱 실행 실패";
+      // 409: 같은 마켓 수집/파싱이 이미 진행 중(락 공유) → 안내 후 버튼 잠금.
+      if (/already running|진행 중|409/i.test(msg)) {
+        setRunningDomains((s) => new Set(s).add(m.domain));
+        window.alert(
+          "이미 이 마켓 수집/파싱이 진행 중입니다. '데이터 수집 관리 > 진행 중'에서 확인하세요.",
+        );
+      } else {
+        window.alert(msg);
+      }
+    } finally {
+      setParsing(null);
     }
   }
 
@@ -259,6 +307,17 @@ export default function MarketsAdminPage() {
                           : runningDomains.has(m.domain)
                             ? "진행 중"
                             : "수집 실행"}
+                      </button>
+                      <button
+                        onClick={() => handleParse(m)}
+                        disabled={
+                          parsing === m.id ||
+                          crawling === m.id ||
+                          runningDomains.has(m.domain)
+                        }
+                        className={actionBtn.accent}
+                      >
+                        {parsing === m.id ? "파싱 중…" : "상세 파싱"}
                       </button>
                       <button
                         onClick={() => setView({ mode: "urls", market: m })}

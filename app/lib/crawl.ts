@@ -1,6 +1,6 @@
 // 데이터 수집(크롤) 관리 API 클라이언트 — Celery 기반.
-// 계약: GET /api/admin/crawl/{jobs,history,schedule}, POST .../jobs/{task_id}/revoke,
-//       POST /api/admin/markets/{market_id}/crawl. (운영 OpenAPI 기준)
+// 계약: GET /api/admin/crawl/{history,schedule}, POST .../jobs/{task_id}/revoke,
+//       POST /api/admin/markets/{market_id}/{crawl,parse}. (운영 OpenAPI 기준)
 // 인증·기반 URL은 auth.ts 공통 헬퍼 재사용.
 
 import { API_BASE_URL, authHeaders, ensureOk } from "./auth";
@@ -9,16 +9,6 @@ const base = `${API_BASE_URL}/api/admin/crawl`;
 
 /** 완료/진행 이력 상태값 — 백엔드 status 열거와 동일. */
 export type CrawlStatus = "running" | "success" | "failure" | "revoked";
-
-/** 진행 중인 크롤 잡 1건(워커에서 실행 중). */
-export interface ActiveJob {
-  task_id: string;
-  name: string;
-  args: unknown[];
-  kwargs: Record<string, unknown>;
-  worker: string;
-  started_at: string | null; // ISO datetime
-}
 
 /** 완료/진행 크롤 잡 이력 1건(crawl_jobs 원장). */
 export interface CrawlJob {
@@ -54,19 +44,6 @@ export interface HistoryQuery {
   status?: CrawlStatus;
   limit?: number;
   offset?: number;
-}
-
-/** 진행 중인(활성) 크롤 잡 목록. */
-export async function listActiveJobs(
-  signal?: AbortSignal,
-): Promise<ActiveJob[]> {
-  const res = await fetch(`${base}/jobs`, {
-    signal,
-    cache: "no-store",
-    headers: authHeaders(),
-  });
-  await ensureOk(res);
-  return (await res.json()) as ActiveJob[];
 }
 
 /** 완료/진행 이력 목록. created_at 최신순(백엔드 정렬). */
@@ -124,6 +101,20 @@ export async function triggerCrawl(
     method: "POST",
     headers: authHeaders(true),
     body: JSON.stringify(maxPages !== undefined ? { max_pages: maxPages } : {}),
+  });
+  await ensureOk(res);
+}
+
+/** 마켓 상세 원문 파싱(stage-2) 트리거. limit 지정 시 이번 런 처리 수 제한.
+ *  미파싱/재등장 product_urls의 상세를 fetch해 raw_html 적재(같은 마켓 락 공유). */
+export async function triggerParse(
+  marketId: number,
+  limit?: number,
+): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/markets/${marketId}/parse`, {
+    method: "POST",
+    headers: authHeaders(true),
+    body: JSON.stringify(limit !== undefined ? { limit } : {}),
   });
   await ensureOk(res);
 }

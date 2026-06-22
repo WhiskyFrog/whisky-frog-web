@@ -119,11 +119,33 @@ export interface paths {
          *     크롤은 robots Crawl-delay(사이트별)로 길어질 수 있어 동기 실행하지 않고 Celery로
          *     enqueue하고 즉시 202+`task_id`를 반환한다. 실제 수집·UPSERT는 워커(크롤러 ①)가 수행.
          *
-         *     가드(handoff-api-crawl-trigger):
-         *     - 어댑터 없는 마켓 → 400, 없는 마켓 → 404.
-         *     - 이미 진행 중(Redis 락 보유)이면 → 409 (연타 시 큐 쌓임 방지). 최종 보장은 워커의 태스크 락.
+         *     가드(handoff-api-crawl-trigger): 어댑터 없음 400 · 없는 마켓 404 · 진행 중 409.
          */
         post: operations["trigger_crawl_api_admin_markets__market_id__crawl_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/markets/{market_id}/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Parse
+         * @description 마켓의 **상세 원문 파싱(stage-2)** 을 비동기 트리거(관리 UI 버튼용).
+         *
+         *     워커 `crawler.parse_market(domain, limit)` enqueue → 미파싱/재등장 `product_urls`의
+         *     상세를 fetch해 `raw_html`/`content_hash` 적재하고 변경분만 `q:parse`로 넘긴다.
+         *     `limit`으로 이번 런 처리 수 제한 가능. 가드는 크롤 트리거와 동일(같은 마켓 락 공유).
+         */
+        post: operations["trigger_parse_api_admin_markets__market_id__parse_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -139,7 +161,7 @@ export interface paths {
         };
         /**
          * List Active Jobs
-         * @description 진행 중인 모든 크롤 잡(요구사항 #1). 워커가 없거나 응답이 없으면 빈 목록.
+         * @description 진행 중인 모든 수집 잡(상품 크롤 + 환율, 요구사항 #1). 워커 무응답 시 빈 목록.
          */
         get: operations["list_active_jobs_api_admin_crawl_jobs_get"];
         put?: never;
@@ -159,7 +181,7 @@ export interface paths {
         };
         /**
          * List Schedule
-         * @description 등록된 정기 크롤 스케줄 목록(요구사항 #3). beat 정적 정의에서 읽는다.
+         * @description 등록된 정기 수집 스케줄 목록(상품 크롤 + 환율, 요구사항 #3). beat 정의에서 읽는다.
          */
         get: operations["list_schedule_api_admin_crawl_schedule_get"];
         put?: never;
@@ -526,6 +548,14 @@ export interface components {
             updated_at: string;
         };
         /**
+         * ParseIn
+         * @description 상세 파싱(stage-2) 트리거 옵션. `limit`로 이번 런에 처리할 상품 수를 제한.
+         */
+        ParseIn: {
+            /** Limit */
+            limit?: number | null;
+        };
+        /**
          * ProductUrlOut
          * @description 크롤러 ①이 모은 상품 URL 1건(발견 원장 + ②단계 파싱 커서).
          */
@@ -888,6 +918,41 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["CrawlIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrawlTriggerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_parse_api_admin_markets__market_id__parse_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                market_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ParseIn"] | null;
             };
         };
         responses: {
