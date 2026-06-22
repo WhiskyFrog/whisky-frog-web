@@ -7,6 +7,7 @@ import {
   listCrawlHistory,
   listSchedule,
   revokeJob,
+  triggerSchedule,
   type CrawlJob,
   type CrawlStatus,
   type ScheduleEntry,
@@ -467,6 +468,7 @@ function ScheduleTab() {
   const [status, setStatus] = useState<Status>("loading");
   const [rows, setRows] = useState<ScheduleEntry[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
+  const [running, setRunning] = useState<string | null>(null); // 실행 트리거 in-flight 스케줄 name
 
   const load = useCallback((signal?: AbortSignal) => {
     setStatus("loading");
@@ -487,6 +489,29 @@ function ScheduleTab() {
     load(c.signal);
     return () => c.abort();
   }, [load]);
+
+  async function handleRun(s: ScheduleEntry) {
+    if (!window.confirm(`'${s.name}' 스케줄을 지금 1회 실행할까요?`)) return;
+    setRunning(s.name);
+    try {
+      await triggerSchedule(s.name);
+      window.alert(
+        `'${s.name}' 작업을 등록했습니다. '진행 중' 탭에서 상태를 확인하세요.`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "실행 실패";
+      // 409: 같은 태스크가 이미 진행 중(연타/중복 방지) → 에러 대신 안내.
+      if (/already running|진행 중|409/i.test(msg)) {
+        window.alert(
+          "이미 같은 작업이 진행 중입니다. '진행 중' 탭에서 확인하세요.",
+        );
+      } else {
+        window.alert(msg);
+      }
+    } finally {
+      setRunning(null);
+    }
+  }
 
   if (status === "loading") {
     return (
@@ -510,7 +535,7 @@ function ScheduleTab() {
   return (
     <div className="overflow-x-auto">
       <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">
-        정기 크롤 예정(읽기 전용). 주기는 celery beat 정의값입니다.
+        정기 수집 예정. 주기는 celery beat 정의값이며, ‘지금 실행’으로 1회 수동 트리거할 수 있습니다.
       </p>
       <table className="w-full border-collapse text-sm">
         <thead>
@@ -518,6 +543,7 @@ function ScheduleTab() {
             <th className="px-3 py-2 font-medium">이름</th>
             <th className="px-3 py-2 font-medium">작업(task)</th>
             <th className="px-3 py-2 font-medium">주기</th>
+            <th className="px-3 py-2 text-right font-medium">관리</th>
           </tr>
         </thead>
         <tbody>
@@ -534,6 +560,15 @@ function ScheduleTab() {
               </td>
               <td className="px-3 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">
                 {s.schedule}
+              </td>
+              <td className="px-3 py-2 text-right whitespace-nowrap">
+                <button
+                  onClick={() => handleRun(s)}
+                  disabled={running === s.name}
+                  className={actionBtn.run}
+                >
+                  {running === s.name ? "실행 중…" : "지금 실행"}
+                </button>
               </td>
             </tr>
           ))}

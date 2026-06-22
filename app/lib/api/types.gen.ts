@@ -192,6 +192,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/crawl/schedule/{name}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Schedule
+         * @description 등록된 정기 수집 스케줄을 **즉시 1회** 실행(관리 UI '지금 실행' 버튼용).
+         *
+         *     beat 정의를 기다리지 않고 같은 태스크를 비동기 enqueue → 202+`task_id`. 폴링/안내는
+         *     마켓 트리거와 동일 패턴(`GET /jobs/{task_id}`). `name`은 `GET /schedule`이 주는 값과 1:1.
+         *
+         *     가드: 없는(또는 수집 외) 스케줄 name → 404 · 같은 태스크 진행 중 → 409
+         *     (마켓 crawl/parse 가드와 동일 정책 — best-effort, 워커 무응답 시 fail-open).
+         */
+        post: operations["trigger_schedule_api_admin_crawl_schedule__name__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/crawl/history": {
         parameters: {
             query?: never;
@@ -611,6 +637,24 @@ export interface components {
             /** Schedule */
             schedule: string;
         };
+        /**
+         * ScheduleRunOut
+         * @description 스케줄 수동 1회 실행 응답 — 비동기 enqueue 결과(즉시 반환).
+         *
+         *     마켓 트리거(`CrawlTriggerOut`)와 동형(`task_id` 폴링/안내 동일 패턴)이되, 식별자는
+         *     market_id가 아니라 스케줄 행과 1:1 매핑되는 `name`(= `ScheduleEntry.name`).
+         */
+        ScheduleRunOut: {
+            /** Task Id */
+            task_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @default queued
+             */
+            status: string;
+        };
         /** ShippingOptionIn */
         ShippingOptionIn: {
             /** Name */
@@ -1012,6 +1056,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScheduleEntry"][];
+                };
+            };
+        };
+    };
+    trigger_schedule_api_admin_crawl_schedule__name__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

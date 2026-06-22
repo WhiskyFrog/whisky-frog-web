@@ -118,3 +118,13 @@ export async function triggerParse(
   });
   await ensureOk(res);
 }
+
+/** 등록된 정기 스케줄(환율·정기 크롤 등)을 즉시 1회 실행. name = ScheduleEntry.name.
+ *  같은 태스크 진행 중이면 409, 없는 스케줄이면 404(마켓 트리거와 동일 가드). */
+export async function triggerSchedule(name: string): Promise<void> {
+  const res = await fetch(
+    `${base}/schedule/${encodeURIComponent(name)}/run`,
+    { method: "POST", headers: authHeaders() },
+  );
+  await ensureOk(res);
+}
