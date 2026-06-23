@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   estimateDirectPrice,
   formatKrw,
   type DirectPriceEstimate,
   type Incoterm,
 } from "../../lib/directPrice";
+import {
+  fetchExchangeRates,
+  formatRate,
+  type ExchangeRate,
+} from "../../lib/exchangeRates";
 import { CURRENCY_OPTIONS } from "../../lib/markets";
 
 type Status = "idle" | "loading" | "error" | "ready";
@@ -34,6 +39,20 @@ export default function DirectPricePage() {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [result, setResult] = useState<DirectPriceEstimate | null>(null);
+
+  // 우리가 이미 보유한 고시환율(/api/exchange-rates) — 통화 라벨 옆 표시용.
+  const [rates, setRates] = useState<ExchangeRate[]>([]);
+  const selectedRate = rates.find((r) => r.currency === currency)?.rate_krw;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchExchangeRates(controller.signal)
+      .then(setRates)
+      .catch(() => {
+        /* 환율 표시 보조 — 실패해도 폼은 동작 */
+      });
+    return () => controller.abort();
+  }, []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,9 +104,19 @@ export default function DirectPricePage() {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="currency" className={labelClass}>
-              통화
-            </label>
+            <div className="mb-1 flex items-baseline justify-between gap-2">
+              <label
+                htmlFor="currency"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                통화
+              </label>
+              {selectedRate != null && (
+                <span className="text-xs tabular-nums text-gray-400 dark:text-gray-500">
+                  {formatRate(selectedRate)} 원/{currency}
+                </span>
+              )}
+            </div>
             <select
               id="currency"
               value={currency}
