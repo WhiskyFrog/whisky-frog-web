@@ -24,6 +24,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Public Markets
+         * @description 메인화면에 노출할 활성 마켓 목록(이름순).
+         */
+        get: operations["list_public_markets_api_markets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cost/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quote Cost
+         * @description 위스키 1건의 한국 직구 landed cost·세금을 계산한다.
+         *
+         *     - 마켓 없음 → 404, 배송옵션 불일치 → 404.
+         *     - 현재 주차 환율(마켓 통화/USD) 미수집 → 422.
+         */
+        post: operations["quote_cost_api_cost_quote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/login": {
         parameters: {
             query?: never;
@@ -350,6 +393,61 @@ export interface components {
             started_at?: string | null;
         };
         /**
+         * CostQuoteIn
+         * @description 직구가 계산 입력. 마켓은 id로 지정, 배송은 옵션 id 또는 현지통화 금액.
+         */
+        CostQuoteIn: {
+            /** Market Id */
+            market_id: number;
+            /** Local Price */
+            local_price: number | string;
+            /** Volume Ml */
+            volume_ml: number;
+            /** Abv */
+            abv: number | string;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Shipping Option Id */
+            shipping_option_id?: number | null;
+            /** Shipping Local */
+            shipping_local?: number | string | null;
+        };
+        /**
+         * CostQuoteOut
+         * @description 직구가 계산 결과(모든 금액 원화 정수) + 사용된 환율 에코.
+         */
+        CostQuoteOut: {
+            /** Market Id */
+            market_id: number;
+            /** Currency */
+            currency: string;
+            /** Fx Rate */
+            fx_rate: string;
+            /** Usd Fx Rate */
+            usd_fx_rate: string;
+            /** Goods Krw */
+            goods_krw: number;
+            /** Shipping Krw */
+            shipping_krw: number;
+            /** Tariff */
+            tariff: number;
+            /** Liquor Tax */
+            liquor_tax: number;
+            /** Education Tax */
+            education_tax: number;
+            /** Vat */
+            vat: number;
+            /** Total Tax */
+            total_tax: number;
+            /** Landed Cost */
+            landed_cost: number;
+            /** Duty Free */
+            duty_free: boolean;
+        };
+        /**
          * CrawlIn
          * @description 크롤 트리거 옵션. `max_pages`로 스모크(예: 1페이지=24건)만 돌릴 수 있다.
          */
@@ -574,6 +672,26 @@ export interface components {
             updated_at: string;
         };
         /**
+         * MarketPublicOut
+         * @description 공개 마켓 목록 한 행 — 프론트 메뉴/링크용 식별 필드만.
+         */
+        MarketPublicOut: {
+            /** Id */
+            id: number;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Country */
+            country: string | null;
+            /** Currency */
+            currency: string;
+            /** Domain */
+            domain: string;
+            /** Base Url */
+            base_url: string | null;
+        };
+        /**
          * ParseIn
          * @description 상세 파싱(stage-2) 트리거 옵션. `limit`로 이번 런에 처리할 상품 수를 제한.
          */
@@ -727,6 +845,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExchangeRateOut"][];
+                };
+            };
+        };
+    };
+    list_public_markets_api_markets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketPublicOut"][];
+                };
+            };
+        };
+    };
+    quote_cost_api_cost_quote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CostQuoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostQuoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
