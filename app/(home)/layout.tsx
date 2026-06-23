@@ -17,8 +17,9 @@ export default function HomeLayout({
 
       {children}
 
-      {/* 좌하단 요약 환율표 — 전체보기 클릭 시 /exchange-rates 상세 페이지로 이동 */}
-      <div className="fixed bottom-4 left-4 z-10">
+      {/* 좌하단 요약 환율표 — 전체보기 클릭 시 /exchange-rates 상세 페이지로 이동.
+          모바일(sm 미만)에선 숨김. */}
+      <div className="fixed bottom-4 left-4 z-10 hidden sm:block">
         <ExchangeRateMini />
       </div>
     </div>
