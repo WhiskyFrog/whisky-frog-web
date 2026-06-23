@@ -80,7 +80,7 @@ export default function DirectPricePage() {
       currency,
       purchase_amount: purchaseAmount,
       shipping_cost: shippingCost.trim() === "" ? "0" : shippingCost,
-      incoterm,
+      incoterm: overDutyFree ? "FOB" : incoterm,
       fta: overDutyFree ? fta : undefined,
     })
       .then((data) => {
@@ -140,7 +140,7 @@ export default function DirectPricePage() {
             </label>
             <select
               id="incoterm"
-              value={incoterm}
+              value={overDutyFree ? "FOB" : incoterm}
               onChange={(e) => setIncoterm(e.target.value as Incoterm)}
               disabled={overDutyFree}
               className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-60`}
