@@ -17,6 +17,7 @@ export interface DirectPriceInput {
   purchase_amount: string; // 구매금액(상품가 + 현지배송), 외화 Decimal 문자열
   shipping_cost: string; // 배송비(배대지/포워딩), 외화 Decimal 문자열
   incoterm: Incoterm; // FOB(배송 과표 포함) / DAP(미포함)
+  fta?: boolean; // 원산지 FTA 협정 적용 여부(관세 0). 과세($150 초과) 시에만 의미.
 }
 
 /**
