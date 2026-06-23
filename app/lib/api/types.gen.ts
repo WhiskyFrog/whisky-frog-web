@@ -447,7 +447,7 @@ export interface components {
         };
         /**
          * DirectPriceIn
-         * @description 빠른계산 입력 — 통화·인코텀즈·구매금액·배송비(현지통화).
+         * @description 빠른계산 입력 — 통화·인코텀즈·FTA여부·구매금액·배송비(현지통화).
          */
         DirectPriceIn: {
             /** Currency */
@@ -458,6 +458,11 @@ export interface components {
              * @enum {string}
              */
             incoterm: "FOB" | "DAP";
+            /**
+             * Fta
+             * @default false
+             */
+            fta: boolean;
             /** Purchase Amount */
             purchase_amount: number | string;
             /**
