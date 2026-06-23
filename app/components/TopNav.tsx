@@ -44,14 +44,11 @@ export function TopNav() {
           Whisky Frog
         </Link>
 
-        {/* 마켓 — 호버 시 등록된 마켓 목록 드롭다운 */}
+        {/* 마켓 — 클릭 이동 없이, 호버 시 /api/markets 목록 드롭다운만 표시 */}
         <div className="group relative">
-          <Link
-            href="/admin/markets"
-            className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-          >
+          <span className="cursor-default select-none text-sm text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100">
             마켓
-          </Link>
+          </span>
           {/* top-full에 바로 붙여 호버 유지(중간 빈틈 없음) */}
           <div className="invisible absolute left-0 top-full z-20 min-w-[200px] rounded-md border border-gray-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-gray-700 dark:bg-gray-900">
             {!loaded ? (
@@ -64,16 +61,15 @@ export function TopNav() {
               </p>
             ) : (
               markets.map((m) => (
-                <Link
+                <div
                   key={m.id}
-                  href="/admin/markets"
-                  className="flex items-center justify-between gap-4 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+                  className="flex items-center justify-between gap-4 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300"
                 >
                   <span className="font-medium">{m.name}</span>
                   <span className="text-xs text-gray-400 dark:text-gray-500">
                     {m.currency}
                   </span>
-                </Link>
+                </div>
               ))
             )}
           </div>
