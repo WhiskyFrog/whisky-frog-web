@@ -78,6 +78,14 @@ export function TopNav() {
             )}
           </div>
         </div>
+
+        {/* 직구가격 — 수동입력 확인용 계산 페이지 */}
+        <Link
+          href="/direct-price"
+          className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+        >
+          직구가격
+        </Link>
       </div>
 
       <button
