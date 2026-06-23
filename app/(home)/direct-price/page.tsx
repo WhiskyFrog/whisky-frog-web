@@ -5,10 +5,17 @@ import {
   estimateDirectPrice,
   formatKrw,
   type DirectPriceEstimate,
+  type Incoterm,
 } from "../../lib/directPrice";
 import { CURRENCY_OPTIONS } from "../../lib/markets";
 
 type Status = "idle" | "loading" | "error" | "ready";
+
+/** 인코텀즈 선택지 — 백엔드 Market.incoterm(FOB/DAP)과 동일. */
+const INCOTERM_OPTIONS: { value: Incoterm; label: string }[] = [
+  { value: "DAP", label: "DAP · 도착지인도(배송 과표 미포함)" },
+  { value: "FOB", label: "FOB · 본선인도(배송 과표 포함)" },
+];
 
 /** 세금 내역 행 — 응답에 값이 있으면 표시, 없으면 칸만 열어둔다(formatKrw가 "-"). */
 const TAX_ROWS: { label: string; key: keyof DirectPriceEstimate }[] = [
@@ -20,6 +27,7 @@ const TAX_ROWS: { label: string; key: keyof DirectPriceEstimate }[] = [
 
 export default function DirectPricePage() {
   const [currency, setCurrency] = useState("USD");
+  const [incoterm, setIncoterm] = useState<Incoterm>("DAP");
   const [purchaseAmount, setPurchaseAmount] = useState("");
   const [shippingCost, setShippingCost] = useState("");
 
@@ -42,6 +50,7 @@ export default function DirectPricePage() {
       currency,
       purchase_amount: purchaseAmount,
       shipping_cost: shippingCost.trim() === "" ? "0" : shippingCost,
+      incoterm,
     })
       .then((data) => {
         setResult(data);
@@ -75,7 +84,7 @@ export default function DirectPricePage() {
         className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900"
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
+          <div>
             <label htmlFor="currency" className={labelClass}>
               통화
             </label>
@@ -88,6 +97,24 @@ export default function DirectPricePage() {
               {CURRENCY_OPTIONS.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.code} · {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="incoterm" className={labelClass}>
+              인코텀즈
+            </label>
+            <select
+              id="incoterm"
+              value={incoterm}
+              onChange={(e) => setIncoterm(e.target.value as Incoterm)}
+              className={inputClass}
+            >
+              {INCOTERM_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
                 </option>
               ))}
             </select>

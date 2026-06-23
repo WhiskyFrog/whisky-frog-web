@@ -8,11 +8,15 @@
 
 import { API_BASE_URL } from "./auth";
 
-/** 추정 요청 본문 — gomisoo식 입력(통화·구매금액·배송비). 환율은 보내지 않음(서버 주입). */
+/** 인코텀즈 — 주세 과표에 배송비 포함 여부를 가르는 거래조건(백엔드 Market.incoterm과 동일). */
+export type Incoterm = "FOB" | "DAP";
+
+/** 추정 요청 본문 — gomisoo식 입력(통화·구매금액·배송비·인코텀즈). 환율은 보내지 않음(서버 주입). */
 export interface DirectPriceInput {
   currency: string; // ISO 3 (예: USD)
   purchase_amount: string; // 구매금액(상품가 + 현지배송), 외화 Decimal 문자열
   shipping_cost: string; // 배송비(배대지/포워딩), 외화 Decimal 문자열
+  incoterm: Incoterm; // FOB(배송 과표 포함) / DAP(미포함)
 }
 
 /**
