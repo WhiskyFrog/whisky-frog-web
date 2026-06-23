@@ -61,15 +61,16 @@ export function TopNav() {
               </p>
             ) : (
               markets.map((m) => (
-                <div
+                <Link
                   key={m.id}
+                  href={`/markets/${m.code}`}
                   className="flex items-center justify-between gap-4 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300"
                 >
                   <span className="font-medium">{m.name}</span>
                   <span className="text-xs text-gray-400 dark:text-gray-500">
                     {m.currency}
                   </span>
-                </div>
+                </Link>
               ))
             )}
           </div>

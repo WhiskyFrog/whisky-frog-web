@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/{market_code}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Market Products
+         * @description 활성 마켓의 매칭 완료 상품 목록을 최신 가격 기준으로 반환한다.
+         */
+        get: operations["list_market_products_api_markets__market_code__products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/direct-price/estimate": {
         parameters: {
             query?: never;
@@ -668,6 +688,33 @@ export interface components {
             updated_at: string;
         };
         /**
+         * MarketProductOut
+         * @description 마켓별 제품 목록 한 행 — 목록 UI용 최소 공개 필드.
+         */
+        MarketProductOut: {
+            /** Product Id */
+            product_id: number;
+            /** Product Url Id */
+            product_url_id: number;
+            /** Product Name */
+            product_name: string;
+            /** Raw Name */
+            raw_name: string | null;
+            /** Local Price */
+            local_price: string;
+            /** Currency */
+            currency: string;
+            /** Available */
+            available: boolean;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Crawled At
+             * Format: date-time
+             */
+            crawled_at: string;
+        };
+        /**
          * MarketPublicOut
          * @description 공개 마켓 목록 한 행 — 프론트 메뉴/링크용 식별 필드만.
          */
@@ -861,6 +908,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketPublicOut"][];
+                };
+            };
+        };
+    };
+    list_market_products_api_markets__market_code__products_get: {
+        parameters: {
+            query?: {
+                /** @description 최신 가격 이력의 판매가능 여부. 생략 기본값은 true. */
+                available?: boolean | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                market_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketProductOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
