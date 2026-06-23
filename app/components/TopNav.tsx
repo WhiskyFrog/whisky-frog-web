@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { listMarkets, type Market } from "../lib/markets";
+import { listPublicMarkets, type PublicMarket } from "../lib/markets";
 import { isAuthed } from "../lib/auth";
 import { LoginModal } from "./LoginModal";
 
 /** 홈 상단 메뉴 바. "마켓" 호버 시 등록된 마켓 드롭다운, 우측 끝 관리자 버튼. */
 export function TopNav() {
   const router = useRouter();
-  const [markets, setMarkets] = useState<Market[]>([]);
+  const [markets, setMarkets] = useState<PublicMarket[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
@@ -22,7 +22,7 @@ export function TopNav() {
 
   useEffect(() => {
     const controller = new AbortController();
-    listMarkets(controller.signal)
+    listPublicMarkets(controller.signal)
       .then((data) => {
         setMarkets(data);
         setLoaded(true);

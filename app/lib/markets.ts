@@ -43,6 +43,30 @@ export interface Market extends MarketInput {
 
 export const base = `${API_BASE_URL}/api/admin/markets`;
 
+// ── 공개 마켓 목록 (홈 상단 네비 드롭다운용) — 인증 불필요 ──
+// 계약: GET /api/market → 공개 노출용 마켓 목록(active만 등). 백엔드 구현 예정.
+// 관리용 /api/admin/markets(Bearer 필요)와 별개. 미배포 시 404 → 호출부에서 빈 목록 처리.
+
+/** 공개 마켓 1건 — 드롭다운 표시에 필요한 최소 필드. */
+export interface PublicMarket {
+  id: number;
+  code: string;
+  name: string;
+  currency: string;
+}
+
+/** 공개 마켓 목록 조회(인증 없음). 네트워크/HTTP 오류는 throw. */
+export async function listPublicMarkets(
+  signal?: AbortSignal,
+): Promise<PublicMarket[]> {
+  const res = await fetch(`${API_BASE_URL}/api/market`, {
+    signal,
+    cache: "no-store",
+  });
+  await ensureOk(res);
+  return (await res.json()) as PublicMarket[];
+}
+
 export async function listMarkets(signal?: AbortSignal): Promise<Market[]> {
   const res = await fetch(base, {
     signal,

@@ -6,8 +6,8 @@ import {
   estimateDirectPrice,
   formatKrw,
   type DirectPriceEstimate,
-} from "../lib/directPrice";
-import { CURRENCY_OPTIONS } from "../lib/markets";
+} from "../../lib/directPrice";
+import { CURRENCY_OPTIONS } from "../../lib/markets";
 
 type Status = "idle" | "loading" | "error" | "ready";
 
