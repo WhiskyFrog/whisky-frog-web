@@ -44,7 +44,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/cost/quote": {
+    "/api/direct-price/estimate": {
         parameters: {
             query?: never;
             header?: never;
@@ -54,13 +54,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Quote Cost
-         * @description 위스키 1건의 한국 직구 landed cost·세금을 계산한다.
-         *
-         *     - 마켓 없음 → 404, 배송옵션 불일치 → 404.
-         *     - 현재 주차 환율(마켓 통화/USD) 미수집 → 422.
+         * Estimate
+         * @description 통화·금액 기반 직구가 빠른계산. 환율 미수집 시 422(친화 문구).
          */
-        post: operations["quote_cost_api_cost_quote_post"];
+        post: operations["estimate_api_direct_price_estimate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -393,61 +390,6 @@ export interface components {
             started_at?: string | null;
         };
         /**
-         * CostQuoteIn
-         * @description 직구가 계산 입력. 마켓은 id로 지정, 배송은 옵션 id 또는 현지통화 금액.
-         */
-        CostQuoteIn: {
-            /** Market Id */
-            market_id: number;
-            /** Local Price */
-            local_price: number | string;
-            /** Volume Ml */
-            volume_ml: number;
-            /** Abv */
-            abv: number | string;
-            /**
-             * Quantity
-             * @default 1
-             */
-            quantity: number;
-            /** Shipping Option Id */
-            shipping_option_id?: number | null;
-            /** Shipping Local */
-            shipping_local?: number | string | null;
-        };
-        /**
-         * CostQuoteOut
-         * @description 직구가 계산 결과(모든 금액 원화 정수) + 사용된 환율 에코.
-         */
-        CostQuoteOut: {
-            /** Market Id */
-            market_id: number;
-            /** Currency */
-            currency: string;
-            /** Fx Rate */
-            fx_rate: string;
-            /** Usd Fx Rate */
-            usd_fx_rate: string;
-            /** Goods Krw */
-            goods_krw: number;
-            /** Shipping Krw */
-            shipping_krw: number;
-            /** Tariff */
-            tariff: number;
-            /** Liquor Tax */
-            liquor_tax: number;
-            /** Education Tax */
-            education_tax: number;
-            /** Vat */
-            vat: number;
-            /** Total Tax */
-            total_tax: number;
-            /** Landed Cost */
-            landed_cost: number;
-            /** Duty Free */
-            duty_free: boolean;
-        };
-        /**
          * CrawlIn
          * @description 크롤 트리거 옵션. `max_pages`로 스모크(예: 1페이지=24건)만 돌릴 수 있다.
          */
@@ -502,6 +444,55 @@ export interface components {
              * @default queued
              */
             status: string;
+        };
+        /**
+         * DirectPriceIn
+         * @description 빠른계산 입력 — 통화·인코텀즈·구매금액·배송비(현지통화).
+         */
+        DirectPriceIn: {
+            /** Currency */
+            currency: string;
+            /**
+             * Incoterm
+             * @default DAP
+             * @enum {string}
+             */
+            incoterm: "FOB" | "DAP";
+            /** Purchase Amount */
+            purchase_amount: number | string;
+            /**
+             * Shipping Cost
+             * @default 0
+             */
+            shipping_cost: number | string;
+        };
+        /**
+         * DirectPriceOut
+         * @description 빠른계산 결과(금액 원화 정수). `exchange_rate`는 서버가 적용한 고시환율 에코.
+         */
+        DirectPriceOut: {
+            /** Currency */
+            currency: string;
+            /** Exchange Rate */
+            exchange_rate: string;
+            /** Goods Value Krw */
+            goods_value_krw: number;
+            /** Dutiable Value Krw */
+            dutiable_value_krw: number;
+            /** Customs Duty Krw */
+            customs_duty_krw: number;
+            /** Liquor Tax Krw */
+            liquor_tax_krw: number;
+            /** Education Tax Krw */
+            education_tax_krw: number;
+            /** Vat Krw */
+            vat_krw: number;
+            /** Total Tax Krw */
+            total_tax_krw: number;
+            /** Total Landed Krw */
+            total_landed_krw: number;
+            /** Taxable */
+            taxable: boolean;
         };
         /**
          * ExchangeRateOut
@@ -869,7 +860,7 @@ export interface operations {
             };
         };
     };
-    quote_cost_api_cost_quote_post: {
+    estimate_api_direct_price_estimate_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -878,7 +869,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CostQuoteIn"];
+                "application/json": components["schemas"]["DirectPriceIn"];
             };
         };
         responses: {
@@ -888,7 +879,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CostQuoteOut"];
+                    "application/json": components["schemas"]["DirectPriceOut"];
                 };
             };
             /** @description Validation Error */

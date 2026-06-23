@@ -284,9 +284,10 @@ export default function DirectPricePage() {
             </tbody>
           </table>
 
-          {result.notes && (
-            <p className="mt-3 text-xs text-gray-400">{result.notes}</p>
-          )}
+          <p className="mt-3 text-xs text-gray-400">
+            비FTA(관세 20%)·DAP·1병 1L 이하 가정의 추정값입니다. 원산지 FTA·정확
+            용량·현지세에 따라 실제 통관 세액과 다를 수 있습니다.
+          </p>
         </section>
       )}
     </main>

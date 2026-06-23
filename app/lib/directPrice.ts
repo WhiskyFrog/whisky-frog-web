@@ -6,7 +6,7 @@
 // 계약(백엔드): POST /api/direct-price/estimate — 공개(인증 불필요), 일회성(저장 없음).
 //   ※ 핸드오프: ../whisky-frog-lab/docs/handoff-frontend-to-api-cost-quote-followup.md
 
-import { API_BASE_URL } from "./auth";
+import { API_BASE_URL, ensureOk } from "./auth";
 
 /** 인코텀즈 — 주세 과표에 배송비 포함 여부를 가르는 거래조건(백엔드 Market.incoterm과 동일). */
 export type Incoterm = "FOB" | "DAP";
@@ -33,14 +33,13 @@ export interface DirectPriceEstimate {
   education_tax_krw: number | string; // 교육세
   vat_krw: number | string; // 부가세
   total_tax_krw: number | string; // 총 세액
-  total_landed_krw: number | string; // 최종 직구 예상금액(물품가 + 총세액)
-  taxable: boolean; // 과세 대상 여부($150 초과 등 — 판정은 백엔드)
-  notes?: string | null; // 안내문(적용 세율 요약 등)
+  total_landed_krw: number | string; // 최종 직구 예상금액(과세가격 + 총세액)
+  taxable: boolean; // 과세 대상 여부(false = 소액면세 적용 — 판정은 백엔드)
 }
 
 /**
  * 직구가격 추정 요청. 네트워크/HTTP 오류는 throw — 호출부에서 에러 상태로 처리.
- * 백엔드 엔드포인트 미배포 시 404/연결오류가 나며, UI가 안내 메시지로 표시한다.
+ * 422(환율 미수집 친화 문구 / 입력 검증 배열)는 ensureOk가 detail로 표면화한다.
  */
 export async function estimateDirectPrice(
   input: DirectPriceInput,
@@ -53,20 +52,7 @@ export async function estimateDirectPrice(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) {
-    if (res.status === 404)
-      throw new Error(
-        "직구가격 계산 API가 아직 백엔드에 준비되지 않았습니다 (404).",
-      );
-    let detail = `직구가격 계산 실패 (HTTP ${res.status})`;
-    try {
-      const body = await res.json();
-      if (typeof body?.detail === "string") detail = body.detail;
-    } catch {
-      /* 본문 없음 */
-    }
-    throw new Error(detail);
-  }
+  await ensureOk(res);
   return (await res.json()) as DirectPriceEstimate;
 }
 
