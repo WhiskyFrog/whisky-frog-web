@@ -713,6 +713,21 @@ export interface components {
              * Format: date-time
              */
             crawled_at: string;
+            /**
+             * Direct Price Krw
+             * @description 예상 직구가(원화, landed = 과세가격 + 대표배송 + 세금). 계산 불가 시 null.
+             */
+            direct_price_krw?: number | null;
+            /**
+             * Shipping Krw
+             * @description 적용 배송비(원화, 활성 배송옵션 최저가 기준). direct_price_krw에 포함된 값.
+             */
+            shipping_krw?: number | null;
+            /**
+             * Exchange Rate
+             * @description 계산에 쓴 관세청 주간 고시환율(원/현지통화 1단위). 미수집이면 null.
+             */
+            exchange_rate?: string | null;
         };
         /**
          * MarketPublicOut

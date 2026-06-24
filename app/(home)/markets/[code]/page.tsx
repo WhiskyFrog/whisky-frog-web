@@ -10,6 +10,7 @@ import {
   listMarketProducts,
   type MarketProduct,
 } from "../../../lib/products";
+import { formatKrw } from "../../../lib/directPrice";
 
 type Status = "loading" | "error" | "ready";
 
@@ -79,7 +80,7 @@ export default function MarketProductsPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">마켓</p>
           <h1 className="mt-1 text-2xl font-bold">{title}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            매칭 완료된 상품의 최신 현지 가격입니다.
+            매칭 완료된 상품의 최신 현지 가격과 예상 직구가(원화)입니다.
           </p>
         </div>
 
@@ -139,6 +140,7 @@ export default function MarketProductsPage() {
                 <tr className="border-b-2 border-gray-300 text-left text-gray-600 dark:border-gray-700 dark:text-gray-400">
                   <th className="px-3 py-2 font-medium">상품</th>
                   <th className="px-3 py-2 text-right font-medium">현지 가격</th>
+                  <th className="px-3 py-2 text-right font-medium">예상 직구가</th>
                   <th className="px-3 py-2 text-center font-medium">상태</th>
                   <th className="px-3 py-2 font-medium">수집 시각</th>
                   <th className="px-3 py-2 text-right font-medium">원문</th>
@@ -162,6 +164,27 @@ export default function MarketProductsPage() {
                     </td>
                     <td className="px-3 py-3 text-right font-medium tabular-nums">
                       {formatLocalPrice(p.local_price, p.currency)}
+                    </td>
+                    <td className="px-3 py-3 text-right tabular-nums">
+                      {p.direct_price_krw != null ? (
+                        <>
+                          <div className="font-semibold text-blue-600 dark:text-blue-400">
+                            {formatKrw(p.direct_price_krw)}
+                          </div>
+                          {p.shipping_krw != null && (
+                            <div className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                              배송 {formatKrw(p.shipping_krw)} 포함
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span
+                          className="text-gray-400 dark:text-gray-500"
+                          title="환율 미수집 또는 용량·도수 미정규화로 산출 보류"
+                        >
+                          —
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-center">
                       <span
@@ -214,6 +237,12 @@ export default function MarketProductsPage() {
               </button>
             </div>
           </div>
+
+          <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+            예상 직구가는 현재 주차 관세청 고시환율 + 마켓 세금설정 + 대표배송(활성
+            배송옵션 최저가) 기준 추정값이며, 실제 통관 세액·배송비와 다를 수
+            있습니다. 정밀 계산은 직구가격 계산 페이지에서 옵션을 직접 입력하세요.
+          </p>
         </>
       )}
     </main>
