@@ -6,6 +6,7 @@ export interface ProcessingRunResult {
   task_id: string;
   task: string;
   status: string;
+  market_id?: number | null;
 }
 
 export interface ProcessingJobStatus {
@@ -15,12 +16,15 @@ export interface ProcessingJobStatus {
 }
 
 export async function triggerProcessing(
+  marketId: number,
   limit?: number,
 ): Promise<ProcessingRunResult> {
+  const body: { market_id: number; limit?: number } = { market_id: marketId };
+  if (limit !== undefined) body.limit = limit;
   const res = await fetch(`${base}/run`, {
     method: "POST",
     headers: authHeaders(true),
-    body: JSON.stringify(limit !== undefined ? { limit } : {}),
+    body: JSON.stringify(body),
   });
   await ensureOk(res);
   return (await res.json()) as ProcessingRunResult;

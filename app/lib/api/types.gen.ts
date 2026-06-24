@@ -800,6 +800,10 @@ export interface components {
         ProcessingRunIn: {
             /** Limit */
             limit?: number | null;
+            /** Market Id */
+            market_id?: number | null;
+            /** Market Code */
+            market_code?: string | null;
         };
         /**
          * ProcessingRunOut
@@ -818,6 +822,8 @@ export interface components {
              * @default queued
              */
             status: string;
+            /** Market Id */
+            market_id?: number | null;
         };
         /**
          * ProductUrlOut

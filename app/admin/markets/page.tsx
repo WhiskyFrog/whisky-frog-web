@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
 import {
   listCrawlHistory,
@@ -11,6 +11,7 @@ import {
 import { MarketForm } from "./MarketForm";
 import { ProductUrlList } from "./ProductUrlList";
 import { actionBtn } from "../../components/actionButton";
+import { triggerProcessing } from "../../lib/processing";
 
 /** 진행 중(running) 잡에서 크롤 중인 마켓 도메인 집합 추출.
  *  소스 = DB 원장(history?status=running) — 라이브 워커 inspect는 간헐 빈응답으로 깜빡임. */
@@ -37,6 +38,7 @@ export default function MarketsAdminPage() {
   const [view, setView] = useState<View>({ mode: "list" });
   const [crawling, setCrawling] = useState<number | null>(null); // 수집 트리거 in-flight 마켓 id
   const [parsing, setParsing] = useState<number | null>(null); // 상세 파싱 트리거 in-flight 마켓 id
+  const [processing, setProcessing] = useState<number | null>(null);
   // 현재 크롤 진행 중인 마켓 도메인(버튼 잠금용). 백엔드가 최종 가드지만 UI도 선제 차단.
   const [runningDomains, setRunningDomains] = useState<Set<string>>(new Set());
 
@@ -179,6 +181,41 @@ export default function MarketsAdminPage() {
     }
   }
 
+  async function handleProcess(m: Market) {
+    const ans = window.prompt(
+      `'${m.name}' 상품 상세 프로세싱을 실행합니다.\n전체는 비워두고 확인, 일부만 처리하려면 건수(예: 50)를 입력하세요.\n취소하려면 Esc.`,
+      "",
+    );
+    if (ans === null) return;
+    const trimmed = ans.trim();
+    let limit: number | undefined;
+    if (trimmed !== "") {
+      const n = Number(trimmed);
+      if (!Number.isInteger(n) || n <= 0) {
+        window.alert("건수는 1 이상의 정수여야 합니다.");
+        return;
+      }
+      limit = n;
+    }
+
+    setProcessing(m.id);
+    try {
+      await triggerProcessing(m.id, limit);
+      window.alert(
+        `프로세싱 작업이 등록됐습니다. '${m.name}' 마켓만 처리합니다.`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "프로세싱 실행 실패";
+      if (/already running|진행 중|409/i.test(msg)) {
+        window.alert("이미 프로세싱 작업이 진행 중입니다. 잠시 후 다시 시도하세요.");
+      } else {
+        window.alert(msg);
+      }
+    } finally {
+      setProcessing(null);
+    }
+  }
+
   if (view.mode === "urls") {
     return (
       <ProductUrlList
@@ -265,81 +302,112 @@ export default function MarketsAdminPage() {
             </thead>
             <tbody>
               {rows.map((m) => (
-                <tr
-                  key={m.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
-                >
-                  <td className="px-3 py-2 font-mono text-gray-700 dark:text-gray-300">
-                    {m.code}
-                  </td>
-                  <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
-                    {m.name}
-                  </td>
-                  <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
-                    {m.domain}
-                  </td>
-                  <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
-                    {m.currency}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {m.active ? (
-                      <span className="text-green-600 dark:text-green-400">
-                        ●
-                      </span>
-                    ) : (
-                      <span className="text-gray-300 dark:text-gray-600">●</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-center text-gray-500 dark:text-gray-400">
-                    {m.shipping_options.length}
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="flex justify-end gap-1.5">
-                      <button
-                        onClick={() => handleCrawl(m)}
-                        disabled={
-                          crawling === m.id || runningDomains.has(m.domain)
-                        }
-                        className={actionBtn.run}
-                      >
-                        {crawling === m.id
-                          ? "실행 중…"
-                          : runningDomains.has(m.domain)
-                            ? "진행 중"
-                            : "수집 실행"}
-                      </button>
-                      <button
-                        onClick={() => handleParse(m)}
-                        disabled={
-                          parsing === m.id ||
-                          crawling === m.id ||
-                          runningDomains.has(m.domain)
-                        }
-                        className={actionBtn.accent}
-                      >
-                        {parsing === m.id ? "파싱 중…" : "상세 파싱"}
-                      </button>
-                      <button
-                        onClick={() => setView({ mode: "urls", market: m })}
-                        className={actionBtn.neutral}
-                      >
-                        상품 URL
-                      </button>
-                      <button
-                        onClick={() => setView({ mode: "edit", market: m })}
-                        className={actionBtn.edit}
-                      >
-                        수정
-                      </button>
-                      <button
-                        onClick={() => handleDelete(m)}
-                        className={actionBtn.danger}
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <Fragment key={m.id}>
+                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td
+                      rowSpan={2}
+                      className="border-b border-gray-100 px-3 py-2 align-top font-mono text-gray-700 dark:border-gray-800 dark:text-gray-300"
+                    >
+                      {m.code}
+                    </td>
+                    <td
+                      rowSpan={2}
+                      className="border-b border-gray-100 px-3 py-2 align-top font-medium text-gray-900 dark:border-gray-800 dark:text-gray-100"
+                    >
+                      {m.name}
+                    </td>
+                    <td
+                      rowSpan={2}
+                      className="border-b border-gray-100 px-3 py-2 align-top text-gray-600 dark:border-gray-800 dark:text-gray-400"
+                    >
+                      {m.domain}
+                    </td>
+                    <td
+                      rowSpan={2}
+                      className="border-b border-gray-100 px-3 py-2 align-top text-gray-600 dark:border-gray-800 dark:text-gray-400"
+                    >
+                      {m.currency}
+                    </td>
+                    <td
+                      rowSpan={2}
+                      className="border-b border-gray-100 px-3 py-2 text-center align-top dark:border-gray-800"
+                    >
+                      {m.active ? (
+                        <span className="text-green-600 dark:text-green-400">
+                          ●
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 dark:text-gray-600">
+                          ●
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      rowSpan={2}
+                      className="border-b border-gray-100 px-3 py-2 text-center align-top text-gray-500 dark:border-gray-800 dark:text-gray-400"
+                    >
+                      {m.shipping_options.length}
+                    </td>
+                    <td className="px-3 py-1 text-right text-xs text-gray-400 dark:text-gray-500">
+                      관리
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800">
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          onClick={() => handleCrawl(m)}
+                          disabled={
+                            crawling === m.id || runningDomains.has(m.domain)
+                          }
+                          className={actionBtn.run}
+                        >
+                          {crawling === m.id
+                            ? "실행 중…"
+                            : runningDomains.has(m.domain)
+                              ? "진행 중"
+                              : "수집 실행"}
+                        </button>
+                        <button
+                          onClick={() => handleParse(m)}
+                          disabled={
+                            parsing === m.id ||
+                            crawling === m.id ||
+                            runningDomains.has(m.domain)
+                          }
+                          className={actionBtn.accent}
+                        >
+                          {parsing === m.id ? "파싱 중…" : "상세 파싱"}
+                        </button>
+                        <button
+                          onClick={() => handleProcess(m)}
+                          disabled={processing === m.id}
+                          className={actionBtn.accent}
+                        >
+                          {processing === m.id ? "처리 중…" : "프로세스"}
+                        </button>
+                        <button
+                          onClick={() => setView({ mode: "urls", market: m })}
+                          className={actionBtn.neutral}
+                        >
+                          상품 URL
+                        </button>
+                        <button
+                          onClick={() => setView({ mode: "edit", market: m })}
+                          className={actionBtn.edit}
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => handleDelete(m)}
+                          className={actionBtn.danger}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>
