@@ -192,6 +192,29 @@ export function emptyMarketInput(): MarketInput {
   };
 }
 
+/** 통화 기호 — 표시용(목록/금액). 미정의 통화는 호출부가 코드로 폴백. */
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  JPY: "¥",
+  CNY: "¥",
+  HKD: "HK$",
+  AUD: "A$",
+  CAD: "C$",
+  CHF: "CHF",
+  SGD: "S$",
+  NZD: "NZ$",
+  SEK: "kr",
+  NOK: "kr",
+  DKK: "kr",
+  TWD: "NT$",
+};
+
+/** 주요 통화 — 홈 미니 환율표·직구가 폼에서 쓰는 압축 기준(표시 순서 = 이 배열).
+ *  달러/유로/파운드/엔/대만달러. */
+export const PRIMARY_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "TWD"] as const;
+
 /** 통화 선택 옵션 (백엔드 CURRENCY_NAMES 기준). */
 export const CURRENCY_OPTIONS: { code: string; name: string }[] = [
   { code: "USD", name: "미국 달러" },
@@ -210,3 +233,9 @@ export const CURRENCY_OPTIONS: { code: string; name: string }[] = [
   { code: "DKK", name: "덴마크 크로네" },
   { code: "TWD", name: "대만 달러" },
 ];
+
+/** 주요 통화 선택 옵션 — PRIMARY_CURRENCIES 순서로 정렬한 {code,name}. */
+export const PRIMARY_CURRENCY_OPTIONS: { code: string; name: string }[] =
+  PRIMARY_CURRENCIES.map(
+    (code) => CURRENCY_OPTIONS.find((c) => c.code === code)!,
+  );

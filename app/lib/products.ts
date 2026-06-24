@@ -1,4 +1,5 @@
 import { API_BASE_URL, ensureOk } from "./auth";
+import { CURRENCY_SYMBOLS } from "./markets";
 import type { components } from "./api/types.gen";
 
 export type MarketProduct = components["schemas"]["MarketProductOut"];
@@ -34,12 +35,17 @@ export function formatLocalPrice(
   value: number | string,
   currency: string,
 ): string {
+  const symbol = CURRENCY_SYMBOLS[currency];
   const n = Number(value);
-  if (Number.isNaN(n)) return `${value} ${currency}`;
-  return `${currency} ${n.toLocaleString("ko-KR", {
+  if (Number.isNaN(n)) {
+    return symbol ? `${symbol}${value}` : `${value} ${currency}`;
+  }
+  const num = n.toLocaleString("ko-KR", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  })}`;
+  });
+  // 기호가 있으면 "£82.51", 없으면 코드 폴백 "TWD 1,200".
+  return symbol ? `${symbol}${num}` : `${currency} ${num}`;
 }
 
 export function formatDateTime(iso: string): string {

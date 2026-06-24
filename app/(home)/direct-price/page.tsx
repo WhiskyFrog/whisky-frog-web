@@ -12,7 +12,7 @@ import {
   formatRate,
   type ExchangeRate,
 } from "../../lib/exchangeRates";
-import { CURRENCY_OPTIONS } from "../../lib/markets";
+import { PRIMARY_CURRENCY_OPTIONS } from "../../lib/markets";
 
 type Status = "idle" | "loading" | "error" | "ready";
 
@@ -126,7 +126,7 @@ export default function DirectPricePage() {
               onChange={(e) => setCurrency(e.target.value)}
               className={inputClass}
             >
-              {CURRENCY_OPTIONS.map((c) => (
+              {PRIMARY_CURRENCY_OPTIONS.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.code} · {c.name}
                 </option>

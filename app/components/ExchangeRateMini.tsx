@@ -8,11 +8,12 @@ import {
   type ExchangeRate,
 } from "../lib/exchangeRates";
 import { RiseFall } from "./RiseFall";
+import { PRIMARY_CURRENCIES } from "../lib/markets";
 
 type Status = "loading" | "error" | "ready";
 
-/** 미니 표에 노출할 통화 — 표시 순서도 이 배열을 따름. KRW는 기준 통화라 제외. */
-const MINI_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "TWD"] as const;
+/** 미니 표에 노출할 통화 — 공용 주요 통화 기준(표시 순서도 이 배열). KRW는 기준 통화라 제외. */
+const MINI_CURRENCIES = PRIMARY_CURRENCIES;
 
 /** 홈 좌하단 요약 표 — 주요 통화만 압축해서 보여주고, 전체보기로 상세 페이지 연결. */
 export function ExchangeRateMini() {
