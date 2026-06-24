@@ -212,8 +212,15 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
 };
 
 /** 주요 통화 — 홈 미니 환율표·직구가 폼에서 쓰는 압축 기준(표시 순서 = 이 배열).
- *  달러/유로/파운드/엔/대만달러. */
-export const PRIMARY_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "TWD"] as const;
+ *  달러/유로/파운드/엔/대만달러/홍콩달러. */
+export const PRIMARY_CURRENCIES = [
+  "USD",
+  "EUR",
+  "GBP",
+  "JPY",
+  "TWD",
+  "HKD",
+] as const;
 
 /** 통화 선택 옵션 (백엔드 CURRENCY_NAMES 기준). */
 export const CURRENCY_OPTIONS: { code: string; name: string }[] = [
