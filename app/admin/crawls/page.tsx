@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listMarkets, type Market } from "../../lib/markets";
 import { actionBtn } from "../../components/actionButton";
 import {
+  getJobStatus,
   listCrawlHistory,
   listSchedule,
   revokeJob,
@@ -464,11 +465,24 @@ function HistoryTab() {
 }
 
 // ── 스케줄 ───────────────────────────────────────────────
+// 수동 실행한 잡의 진행 상태(폴링용). state = Celery 상태 문자열.
+interface RunState {
+  name: string;
+  taskId: string;
+  state: string;
+  result: unknown;
+  error?: string;
+}
+
+const TERMINAL_STATES = new Set(["SUCCESS", "FAILURE", "REVOKED"]);
+const RUN_POLL_MS = 2000;
+
 function ScheduleTab() {
   const [status, setStatus] = useState<Status>("loading");
   const [rows, setRows] = useState<ScheduleEntry[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [running, setRunning] = useState<string | null>(null); // 실행 트리거 in-flight 스케줄 name
+  const [run, setRun] = useState<RunState | null>(null); // 방금 실행한 잡 추적
 
   const load = useCallback((signal?: AbortSignal) => {
     setStatus("loading");
@@ -490,14 +504,43 @@ function ScheduleTab() {
     return () => c.abort();
   }, [load]);
 
+  // 실행한 잡 상태 폴링 — 매 상태변화 후 다음 폴을 예약(종료 상태면 멈춤).
+  useEffect(() => {
+    if (!run || TERMINAL_STATES.has(run.state)) return;
+    const c = new AbortController();
+    const id = setTimeout(() => {
+      getJobStatus(run.taskId, c.signal)
+        .then((js) =>
+          setRun((r) =>
+            r && r.taskId === js.task_id
+              ? { ...r, state: js.state, result: js.result }
+              : r,
+          ),
+        )
+        .catch((err: unknown) => {
+          if (c.signal.aborted) return;
+          const msg = err instanceof Error ? err.message : "상태 조회 실패";
+          setRun((r) =>
+            r && r.taskId === run.taskId
+              ? { ...r, state: "FAILURE", error: msg }
+              : r,
+          );
+        });
+    }, RUN_POLL_MS);
+    return () => {
+      c.abort();
+      clearTimeout(id);
+    };
+  }, [run]);
+
   async function handleRun(s: ScheduleEntry) {
     if (!window.confirm(`'${s.name}' 스케줄을 지금 1회 실행할까요?`)) return;
     setRunning(s.name);
+    setRun(null);
     try {
-      await triggerSchedule(s.name);
-      window.alert(
-        `'${s.name}' 작업을 등록했습니다. '진행 중' 탭에서 상태를 확인하세요.`,
-      );
+      const res = await triggerSchedule(s.name);
+      // 결과 패널에서 마켓별 적재 건수를 폴링해 보여준다(아래 RunResultPanel).
+      setRun({ name: s.name, taskId: res.task_id, state: "PENDING", result: null });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "실행 실패";
       // 409: 같은 태스크가 이미 진행 중(연타/중복 방지) → 에러 대신 안내.
@@ -574,6 +617,103 @@ function ScheduleTab() {
           ))}
         </tbody>
       </table>
+
+      {run && <RunResultPanel run={run} onClose={() => setRun(null)} />}
+    </div>
+  );
+}
+
+// 수동 실행한 잡의 진행/결과 패널. 주간 목록 크롤은 결과가 `{도메인: 적재건수}`이므로
+// 어떤 마켓이 실제로 수집됐는지(싱글몰트샵 포함 여부·건수)를 마켓별로 보여준다.
+function RunResultPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
+  const done = TERMINAL_STATES.has(run.state);
+  // result가 평범한 객체(`{도메인: 수}`)면 마켓별로 분해. 그 외(숫자 등)는 그대로.
+  const breakdown =
+    run.result &&
+    typeof run.result === "object" &&
+    !Array.isArray(run.result)
+      ? (Object.entries(run.result as Record<string, unknown>).filter(
+          ([, v]) => typeof v === "number",
+        ) as [string, number][])
+      : null;
+
+  return (
+    <div className="mt-5 rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-gray-900 dark:text-gray-100">
+            {run.name}
+          </span>
+          <span
+            className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${badgeCls(
+              run.state.toLowerCase() === "success"
+                ? "success"
+                : run.state.toLowerCase() === "failure"
+                  ? "failure"
+                  : "running",
+            )}`}
+          >
+            {run.state}
+          </span>
+          {!done && (
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              실행 중… {RUN_POLL_MS / 1000}초마다 갱신
+            </span>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+        >
+          닫기 ✕
+        </button>
+      </div>
+      <div className="mt-1 font-mono text-[11px] text-gray-400 dark:text-gray-500">
+        {run.taskId}
+      </div>
+
+      {run.error && (
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">⚠ {run.error}</p>
+      )}
+
+      {done && breakdown && breakdown.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">
+            마켓별 결과:
+          </p>
+          <ul className="space-y-0.5 text-sm">
+            {breakdown.map(([domain, n]) => (
+              <li key={domain} className="flex items-center gap-2">
+                <span className="text-gray-700 dark:text-gray-300">{domain}</span>
+                <span className="tabular-nums text-gray-500 dark:text-gray-400">
+                  {n >= 0
+                    ? `${n}건 적재`
+                    : n === -2
+                      ? "이미 진행 중(스킵)"
+                      : "실패"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+            ※ 여기에 없는 마켓은 <b>비활성(active=off)</b>이거나 어댑터 미등록으로
+            주간 크롤에서 제외됩니다. 싱글몰트샵이 안 보이면 마켓 관리에서 활성화
+            여부를 확인하세요.
+          </p>
+        </div>
+      )}
+
+      {done && !breakdown && run.result != null && (
+        <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+          결과: {String(run.result)}
+        </p>
+      )}
+
+      {done && breakdown && breakdown.length === 0 && (
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          수집된 마켓이 없습니다(활성 + 어댑터 등록 마켓 없음).
+        </p>
+      )}
     </div>
   );
 }

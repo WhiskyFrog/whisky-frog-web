@@ -32,6 +32,23 @@ export interface ScheduleEntry {
   schedule: string;
 }
 
+/** 스케줄 수동 1회 실행 응답(비동기 enqueue 결과). task_id로 잡 상태를 폴링한다. */
+export interface ScheduleRunResult {
+  task_id: string;
+  name: string;
+  status: string; // "queued"
+}
+
+/** 단일 잡 상태/결과(트리거 후 폴링용 — GET /jobs/{task_id}).
+ *  state = Celery 상태(PENDING|STARTED|PROGRESS|SUCCESS|FAILURE|REVOKED).
+ *  result = SUCCESS 시 태스크 반환값. 주간 목록 크롤은 `{도메인: 적재건수}`
+ *  (음수: -1=실패, -2=이미 진행 중 / 어댑터 없거나 비활성인 마켓은 키 자체가 없음). */
+export interface JobStatus {
+  task_id: string;
+  state: string;
+  result: unknown;
+}
+
 /** revoke 결과. */
 export interface RevokeResult {
   task_id: string;
@@ -120,11 +137,27 @@ export async function triggerParse(
 }
 
 /** 등록된 정기 스케줄(환율·정기 크롤 등)을 즉시 1회 실행. name = ScheduleEntry.name.
- *  같은 태스크 진행 중이면 409, 없는 스케줄이면 404(마켓 트리거와 동일 가드). */
-export async function triggerSchedule(name: string): Promise<void> {
+ *  같은 태스크 진행 중이면 409, 없는 스케줄이면 404(마켓 트리거와 동일 가드).
+ *  반환 task_id로 `getJobStatus`를 폴링해 마켓별 결과를 확인할 수 있다. */
+export async function triggerSchedule(name: string): Promise<ScheduleRunResult> {
   const res = await fetch(
     `${base}/schedule/${encodeURIComponent(name)}/run`,
     { method: "POST", headers: authHeaders() },
   );
   await ensureOk(res);
+  return (await res.json()) as ScheduleRunResult;
+}
+
+/** 단일 잡 상태/결과 조회(트리거 후 폴링). 결과 백엔드에서 읽으므로 캐시 금지. */
+export async function getJobStatus(
+  taskId: string,
+  signal?: AbortSignal,
+): Promise<JobStatus> {
+  const res = await fetch(`${base}/jobs/${encodeURIComponent(taskId)}`, {
+    signal,
+    cache: "no-store",
+    headers: authHeaders(),
+  });
+  await ensureOk(res);
+  return (await res.json()) as JobStatus;
 }
