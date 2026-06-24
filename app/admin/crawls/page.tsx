@@ -13,6 +13,10 @@ import {
   type CrawlStatus,
   type ScheduleEntry,
 } from "../../lib/crawl";
+import {
+  getProcessingJobStatus,
+  triggerProcessing,
+} from "../../lib/processing";
 
 type Tab = "active" | "history" | "schedule";
 type Status = "loading" | "error" | "ready";
@@ -471,6 +475,7 @@ interface RunState {
   taskId: string;
   state: string;
   result: unknown;
+  kind?: "schedule" | "processing";
   error?: string;
 }
 
@@ -482,6 +487,7 @@ function ScheduleTab() {
   const [rows, setRows] = useState<ScheduleEntry[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [running, setRunning] = useState<string | null>(null); // 실행 트리거 in-flight 스케줄 name
+  const [processing, setProcessing] = useState(false);
   const [run, setRun] = useState<RunState | null>(null); // 방금 실행한 잡 추적
 
   const load = useCallback((signal?: AbortSignal) => {
@@ -509,7 +515,11 @@ function ScheduleTab() {
     if (!run || TERMINAL_STATES.has(run.state)) return;
     const c = new AbortController();
     const id = setTimeout(() => {
-      getJobStatus(run.taskId, c.signal)
+      const statusPromise =
+        run.kind === "processing"
+          ? getProcessingJobStatus(run.taskId, c.signal)
+          : getJobStatus(run.taskId, c.signal);
+      statusPromise
         .then((js) =>
           setRun((r) =>
             r && r.taskId === js.task_id
@@ -556,6 +566,68 @@ function ScheduleTab() {
     }
   }
 
+  async function handleProcessingRun() {
+    const ans = window.prompt(
+      "크롤링된 상품 상세 가공/분류를 실행합니다.\n전체 처리는 비워두고 확인, 일부만 처리하려면 건수(예: 50)를 입력하세요.\n취소하려면 Esc.",
+      "",
+    );
+    if (ans === null) return;
+    const trimmed = ans.trim();
+    let limit: number | undefined;
+    if (trimmed !== "") {
+      const n = Number(trimmed);
+      if (!Number.isInteger(n) || n <= 0) {
+        window.alert("건수는 1 이상의 정수여야 합니다.");
+        return;
+      }
+      limit = n;
+    }
+
+    setProcessing(true);
+    setRun(null);
+    try {
+      const res = await triggerProcessing(limit);
+      setRun({
+        name: "상품 상세 가공/분류",
+        taskId: res.task_id,
+        state: "PENDING",
+        result: null,
+        kind: "processing",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "가공/분류 실행 실패";
+      if (/already running|진행 중|409/i.test(msg)) {
+        window.alert(
+          "이미 가공/분류 작업이 진행 중입니다. 잠시 후 다시 확인하세요.",
+        );
+      } else {
+        window.alert(msg);
+      }
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  const processingAction = (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-indigo-200 bg-indigo-50 px-4 py-3 dark:border-indigo-900 dark:bg-indigo-950/30">
+      <div>
+        <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100">
+          상품 상세 가공/분류
+        </p>
+        <p className="mt-0.5 text-xs text-indigo-700 dark:text-indigo-300">
+          크롤링된 상세 HTML을 정규화하고 상품 매칭/가격 적재/분류 큐 처리를 실행합니다.
+        </p>
+      </div>
+      <button
+        onClick={handleProcessingRun}
+        disabled={processing}
+        className={actionBtn.accent}
+      >
+        {processing ? "실행 중..." : "가공/분류 실행"}
+      </button>
+    </div>
+  );
+
   if (status === "loading") {
     return (
       <div className="py-16 text-center text-gray-500 dark:text-gray-400">
@@ -568,15 +640,20 @@ function ScheduleTab() {
   }
   if (rows.length === 0) {
     return (
-      <EmptyBox
-        title="등록된 정기 스케줄이 없습니다."
-        sub="celery beat 스케줄이 설정되면 여기에 표시됩니다."
-      />
+      <div>
+        {processingAction}
+        {run && <RunResultPanel run={run} onClose={() => setRun(null)} />}
+        <EmptyBox
+          title="등록된 정기 스케줄이 없습니다."
+          sub="celery beat 스케줄이 설정되면 여기에 표시됩니다."
+        />
+      </div>
     );
   }
 
   return (
     <div className="overflow-x-auto">
+      {processingAction}
       <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">
         정기 수집 예정. 주기는 celery beat 정의값이며, ‘지금 실행’으로 1회 수동 트리거할 수 있습니다.
       </p>

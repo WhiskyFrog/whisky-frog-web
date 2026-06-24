@@ -344,6 +344,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/processing/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Processing
+         * @description 가공·분류 배치를 **비동기로 트리거**(관리 UI '지금 분류 실행' 버튼용).
+         *
+         *     정규화→보수적 매칭/가격적재 + 위키 미적중분 LLM 분류 큐 분리(⑤). LLM 지연으로 길어질 수
+         *     있어 동기 실행하지 않고 Celery로 enqueue하고 즉시 202+`task_id`를 반환한다.
+         *
+         *     가드: 같은 가공 잡이 이미 진행 중이면 409(best-effort, 워커 무응답 시 fail-open).
+         */
+        post: operations["trigger_processing_api_admin_processing_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/processing/jobs/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Job Status
+         * @description 단일 가공 잡 상태/결과(트리거 후 폴링용). 결과 백엔드에서 조회.
+         */
+        get: operations["get_job_status_api_admin_processing_jobs__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -689,7 +734,7 @@ export interface components {
         };
         /**
          * MarketProductOut
-         * @description 마켓별 제품 목록 한 행 — 목록 UI용 최소 공개 필드.
+         * @description 마켓별 제품 목록 한 행 — 목록 UI용 최소 공개 필드 + 예상 직구가.
          */
         MarketProductOut: {
             /** Product Id */
@@ -713,20 +758,11 @@ export interface components {
              * Format: date-time
              */
             crawled_at: string;
-            /**
-             * Direct Price Krw
-             * @description 예상 직구가(원화, landed = 과세가격 + 대표배송 + 세금). 계산 불가 시 null.
-             */
+            /** Direct Price Krw */
             direct_price_krw?: number | null;
-            /**
-             * Shipping Krw
-             * @description 적용 배송비(원화, 활성 배송옵션 최저가 기준). direct_price_krw에 포함된 값.
-             */
+            /** Shipping Krw */
             shipping_krw?: number | null;
-            /**
-             * Exchange Rate
-             * @description 계산에 쓴 관세청 주간 고시환율(원/현지통화 1단위). 미수집이면 null.
-             */
+            /** Exchange Rate */
             exchange_rate?: string | null;
         };
         /**
@@ -756,6 +792,32 @@ export interface components {
         ParseIn: {
             /** Limit */
             limit?: number | null;
+        };
+        /**
+         * ProcessingRunIn
+         * @description 가공·분류 트리거 옵션. `limit`로 이번 런에 처리할 product_url 수를 제한(스모크).
+         */
+        ProcessingRunIn: {
+            /** Limit */
+            limit?: number | null;
+        };
+        /**
+         * ProcessingRunOut
+         * @description 트리거 응답 — 비동기 enqueue 결과(즉시 반환). `task_id`로 폴링.
+         */
+        ProcessingRunOut: {
+            /** Task Id */
+            task_id: string;
+            /**
+             * Task
+             * @default processing.run_batch
+             */
+            task: string;
+            /**
+             * Status
+             * @default queued
+             */
+            status: string;
         };
         /**
          * ProductUrlOut
@@ -1443,6 +1505,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RevokeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_processing_api_admin_processing_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ProcessingRunIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessingRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_status_api_admin_processing_jobs__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStatusOut"];
                 };
             };
             /** @description Validation Error */
