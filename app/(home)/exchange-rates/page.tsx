@@ -7,8 +7,8 @@ import {
   formatDate,
   formatRate,
   type ExchangeRate,
-} from "../lib/exchangeRates";
-import { RiseFall } from "../components/RiseFall";
+} from "../../lib/exchangeRates";
+import { RiseFall } from "../../components/RiseFall";
 
 type Status = "loading" | "error" | "ready";
 
