@@ -16,6 +16,46 @@ type Status = "loading" | "error" | "ready";
 
 const PAGE_SIZE = 100;
 
+function DirectPriceBlock({ product }: { product: MarketProduct }) {
+  if (product.direct_price_krw == null) {
+    return (
+      <span
+        className="text-gray-400 dark:text-gray-500"
+        title="환율 미수집 또는 용량·도수 미정규화로 산출 보류"
+      >
+        —
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <div className="whitespace-nowrap font-semibold text-blue-600 dark:text-blue-400">
+        {formatKrw(product.direct_price_krw)}
+      </div>
+      {product.shipping_krw != null && (
+        <div className="mt-0.5 whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">
+          배송 {formatKrw(product.shipping_krw)} 포함
+        </div>
+      )}
+    </>
+  );
+}
+
+function ProductStatusBadge({ available }: { available: boolean }) {
+  return (
+    <span
+      className={
+        available
+          ? "rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950/50 dark:text-green-300"
+          : "rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+      }
+    >
+      {available ? "판매중" : "품절"}
+    </span>
+  );
+}
+
 export default function MarketProductsPage() {
   const params = useParams<{ code: string }>();
   const marketCode = params.code;
@@ -134,8 +174,62 @@ export default function MarketProductsPage() {
 
       {status === "ready" && products.length > 0 && (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+          <div className="space-y-3 sm:hidden">
+            {products.map((p) => (
+              <article
+                key={p.product_url_id}
+                className="rounded-md border border-gray-200 bg-white px-3 py-3 dark:border-gray-800 dark:bg-gray-950"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="font-medium leading-5 text-gray-900 dark:text-gray-100">
+                      {p.product_name}
+                    </h2>
+                    {p.raw_name && p.raw_name !== p.product_name && (
+                      <p className="mt-1 text-xs leading-4 text-gray-500 dark:text-gray-400">
+                        {p.raw_name}
+                      </p>
+                    )}
+                  </div>
+                  <ProductStatusBadge available={p.available} />
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-gray-100 pt-3 dark:border-gray-800">
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      현지 가격
+                    </div>
+                    <div className="mt-1 whitespace-nowrap font-medium tabular-nums">
+                      {formatLocalPrice(p.local_price, p.currency)}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      예상 직구가
+                    </div>
+                    <div className="mt-1 tabular-nums">
+                      <DirectPriceBlock product={p} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3 border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                  <span>{formatDateTime(p.crawled_at)}</span>
+                  <Link
+                    href={p.source_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    원문 보기
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-[760px] border-collapse text-sm">
               <thead>
                 <tr className="border-b-2 border-gray-300 text-left text-gray-600 dark:border-gray-700 dark:text-gray-400">
                   <th className="px-3 py-2 font-medium">상품</th>
@@ -166,36 +260,10 @@ export default function MarketProductsPage() {
                       {formatLocalPrice(p.local_price, p.currency)}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums">
-                      {p.direct_price_krw != null ? (
-                        <>
-                          <div className="font-semibold text-blue-600 dark:text-blue-400">
-                            {formatKrw(p.direct_price_krw)}
-                          </div>
-                          {p.shipping_krw != null && (
-                            <div className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                              배송 {formatKrw(p.shipping_krw)} 포함
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <span
-                          className="text-gray-400 dark:text-gray-500"
-                          title="환율 미수집 또는 용량·도수 미정규화로 산출 보류"
-                        >
-                          —
-                        </span>
-                      )}
+                      <DirectPriceBlock product={p} />
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <span
-                        className={
-                          p.available
-                            ? "rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950/50 dark:text-green-300"
-                            : "rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                        }
-                      >
-                        {p.available ? "판매중" : "품절"}
-                      </span>
+                      <ProductStatusBadge available={p.available} />
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400">
                       {formatDateTime(p.crawled_at)}
