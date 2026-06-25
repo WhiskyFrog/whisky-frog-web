@@ -758,6 +758,8 @@ export interface components {
              * Format: date-time
              */
             crawled_at: string;
+            /** Image Url */
+            image_url?: string | null;
             /** Direct Price Krw */
             direct_price_krw?: number | null;
             /** Shipping Krw */

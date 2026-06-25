@@ -42,6 +42,51 @@ function DirectPriceBlock({ product }: { product: MarketProduct }) {
   );
 }
 
+function ProductThumb({
+  src,
+  alt,
+  className,
+}: {
+  src: string | null | undefined;
+  alt: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const box = `flex shrink-0 items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900 ${className ?? ""}`;
+
+  if (!src || failed) {
+    return (
+      <div className={box} aria-hidden>
+        <svg
+          className="h-1/2 w-1/2 text-gray-300 dark:text-gray-600"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <path d="m21 15-5-5L5 21" />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <div className={box}>
+      {/* 외부 마켓 호스트 이미지 — next/image 도메인 화이트리스트 회피 위해 일반 img. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="h-full w-full object-contain"
+      />
+    </div>
+  );
+}
+
 function ProductStatusBadge({ available }: { available: boolean }) {
   return (
     <span
@@ -181,15 +226,22 @@ export default function MarketProductsPage() {
                 className="rounded-md border border-gray-200 bg-white px-3 py-3 dark:border-gray-800 dark:bg-gray-950"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="font-medium leading-5 text-gray-900 dark:text-gray-100">
-                      {p.product_name}
-                    </h2>
-                    {p.raw_name && p.raw_name !== p.product_name && (
-                      <p className="mt-1 text-xs leading-4 text-gray-500 dark:text-gray-400">
-                        {p.raw_name}
-                      </p>
-                    )}
+                  <div className="flex min-w-0 items-start gap-3">
+                    <ProductThumb
+                      src={p.image_url}
+                      alt={p.product_name}
+                      className="h-14 w-14 rounded-md border border-gray-100 dark:border-gray-800"
+                    />
+                    <div className="min-w-0">
+                      <h2 className="font-medium leading-5 text-gray-900 dark:text-gray-100">
+                        {p.product_name}
+                      </h2>
+                      {p.raw_name && p.raw_name !== p.product_name && (
+                        <p className="mt-1 text-xs leading-4 text-gray-500 dark:text-gray-400">
+                          {p.raw_name}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <ProductStatusBadge available={p.available} />
                 </div>
@@ -247,14 +299,23 @@ export default function MarketProductsPage() {
                     className="border-b border-gray-100 align-top hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
                   >
                     <td className="px-3 py-3">
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {p.product_name}
-                      </div>
-                      {p.raw_name && p.raw_name !== p.product_name && (
-                        <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                          {p.raw_name}
+                      <div className="flex items-start gap-3">
+                        <ProductThumb
+                          src={p.image_url}
+                          alt={p.product_name}
+                          className="h-12 w-12 rounded border border-gray-100 dark:border-gray-800"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {p.product_name}
+                          </div>
+                          {p.raw_name && p.raw_name !== p.product_name && (
+                            <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                              {p.raw_name}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-right font-medium tabular-nums">
                       {formatLocalPrice(p.local_price, p.currency)}
