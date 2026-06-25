@@ -221,7 +221,7 @@ export default function MarketProductsPage() {
                     rel="noreferrer"
                     className="font-medium text-blue-600 hover:underline dark:text-blue-400"
                   >
-                    원문 보기
+                    구매 링크
                   </Link>
                 </div>
               </article>
@@ -237,7 +237,7 @@ export default function MarketProductsPage() {
                   <th className="px-3 py-2 text-right font-medium">예상 직구가</th>
                   <th className="px-3 py-2 text-center font-medium">상태</th>
                   <th className="px-3 py-2 font-medium">수집 시각</th>
-                  <th className="px-3 py-2 text-right font-medium">원문</th>
+                  <th className="px-3 py-2 text-right font-medium">구매 링크</th>
                 </tr>
               </thead>
               <tbody>
@@ -275,7 +275,7 @@ export default function MarketProductsPage() {
                         rel="noreferrer"
                         className="text-sm text-blue-600 hover:underline dark:text-blue-400"
                       >
-                        보기
+                        바로가기
                       </Link>
                     </td>
                   </tr>
