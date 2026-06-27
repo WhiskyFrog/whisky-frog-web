@@ -22,6 +22,7 @@ function toInput(m: Market): MarketInput {
     language: m.language,
     base_url: m.base_url,
     active: m.active,
+    provides_direct_purchase: m.provides_direct_purchase ?? true,
     vat_rate: String(m.vat_rate),
     price_includes_vat: m.price_includes_vat,
     local_alcohol_tax_per_liter: String(m.local_alcohol_tax_per_liter),
@@ -334,6 +335,16 @@ export function MarketForm({
               onChange={(e) => set("active", e.target.checked)}
             />
             활성화 (크롤링 on/off)
+          </label>
+          <label className={checkboxLabelCls}>
+            <input
+              type="checkbox"
+              checked={form.provides_direct_purchase}
+              onChange={(e) =>
+                set("provides_direct_purchase", e.target.checked)
+              }
+            />
+            직구 제공
           </label>
         </div>
       </section>

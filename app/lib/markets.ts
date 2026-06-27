@@ -22,6 +22,7 @@ export interface MarketInput {
   language: string | null;
   base_url: string | null;
   active: boolean;
+  provides_direct_purchase: boolean;
   vat_rate: string;
   price_includes_vat: boolean;
   local_alcohol_tax_per_liter: string;
@@ -56,6 +57,7 @@ export interface PublicMarket {
   currency: string;
   domain: string;
   base_url: string | null;
+  provides_direct_purchase?: boolean;
 }
 
 /** 공개 마켓 목록 조회(인증 없음). 네트워크/HTTP 오류는 throw. */
@@ -179,6 +181,7 @@ export function emptyMarketInput(): MarketInput {
     language: null,
     base_url: null,
     active: true,
+    provides_direct_purchase: true,
     vat_rate: "0",
     price_includes_vat: true,
     local_alcohol_tax_per_liter: "0",

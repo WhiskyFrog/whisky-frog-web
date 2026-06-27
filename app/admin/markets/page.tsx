@@ -394,6 +394,7 @@ export default function MarketsAdminPage() {
                 <th className="px-3 py-2 font-medium">domain</th>
                 <th className="px-3 py-2 font-medium">currency</th>
                 <th className="px-3 py-2 text-center font-medium">active</th>
+                <th className="px-3 py-2 text-center font-medium">직구</th>
                 <th className="px-3 py-2 text-center font-medium">배송옵션</th>
                 <th className="px-3 py-2 text-right font-medium">관리</th>
               </tr>
@@ -437,6 +438,20 @@ export default function MarketsAdminPage() {
                       ) : (
                         <span className="text-gray-300 dark:text-gray-600">
                           ●
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      rowSpan={2}
+                      className="border-b border-gray-100 px-3 py-2 text-center align-top dark:border-gray-800"
+                    >
+                      {m.provides_direct_purchase ? (
+                        <span className="text-blue-600 dark:text-blue-400">
+                          제공
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500">
+                          미제공
                         </span>
                       )}
                     </td>

@@ -42,6 +42,69 @@ function DirectPriceBlock({ product }: { product: MarketProduct }) {
   );
 }
 
+function shouldShowDirectPrice(
+  product: MarketProduct,
+  market: PublicMarket | undefined,
+): boolean {
+  if (market?.provides_direct_purchase !== undefined) {
+    return market.provides_direct_purchase;
+  }
+  return product.direct_price_krw != null || product.local_price_krw == null;
+}
+
+function MarketPriceLabel({
+  product,
+  market,
+}: {
+  product: MarketProduct;
+  market: PublicMarket | undefined;
+}) {
+  return shouldShowDirectPrice(product, market) ? "예상 직구가" : "판매가";
+}
+
+function MarketPriceBlock({
+  product,
+  market,
+}: {
+  product: MarketProduct;
+  market: PublicMarket | undefined;
+}) {
+  const showDirectPrice = shouldShowDirectPrice(product, market);
+  const price = showDirectPrice
+    ? product.direct_price_krw
+    : product.local_price_krw;
+
+  if (price == null) {
+    return (
+      <span
+        className="text-gray-400 dark:text-gray-500"
+        title="환율 미수집 또는 가격 계산 보류"
+      >
+        -
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className={
+          showDirectPrice
+            ? "whitespace-nowrap font-semibold text-blue-600 dark:text-blue-400"
+            : "whitespace-nowrap font-semibold text-gray-900 dark:text-gray-100"
+        }
+      >
+        {formatKrw(price)}
+      </div>
+      {showDirectPrice && product.shipping_krw != null && (
+        <div className="mt-0.5 whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">
+          배송 {formatKrw(product.shipping_krw)} 포함
+        </div>
+      )}
+    </>
+  );
+}
+
 function ProductThumb({
   src,
   alt,
@@ -102,7 +165,13 @@ function ProductStatusBadge({ available }: { available: boolean }) {
 }
 
 /** 이미지 중심 카드 — 이미지가 잘 나오는 마켓(위스키피플 등)에서 그리드로 노출. */
-function ProductCard({ product: p }: { product: MarketProduct }) {
+function ProductCard({
+  product: p,
+  market,
+}: {
+  product: MarketProduct;
+  market: PublicMarket | undefined;
+}) {
   return (
     <article className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <ProductThumb
@@ -135,10 +204,10 @@ function ProductCard({ product: p }: { product: MarketProduct }) {
             </div>
             <div className="text-right">
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                예상 직구가
+                <MarketPriceLabel product={p} market={market} />
               </div>
               <div className="mt-0.5 tabular-nums">
-                <DirectPriceBlock product={p} />
+                <MarketPriceBlock product={p} market={market} />
               </div>
             </div>
           </div>
@@ -216,6 +285,14 @@ export default function MarketProductsPage() {
   const hasPrev = offset > 0;
   const hasNext = products.length === PAGE_SIZE;
   const title = market?.name ?? marketCode;
+  const showDirectPriceColumn =
+    market?.provides_direct_purchase ??
+    (products.some((p) => p.direct_price_krw != null) ||
+      !products.some((p) => p.local_price_krw != null));
+  const priceColumnLabel = showDirectPriceColumn ? "예상 직구가" : "판매가";
+  const priceSummary = showDirectPriceColumn
+    ? "매칭 완료된 상품의 최신 현지 가격과 예상 직구가(원화)입니다."
+    : "매칭 완료된 상품의 최신 현지 가격과 판매가(원화)입니다.";
 
   // 이미지가 잘 나오는 마켓(위스키피플 등) 판별 — 상품 절반 이상이 이미지를 가지면
   // 테이블 대신 이미지 중심 카드 그리드(큰 화면 한 줄 4개)로 노출.
@@ -232,7 +309,7 @@ export default function MarketProductsPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">마켓</p>
           <h1 className="mt-1 text-2xl font-bold">{title}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            매칭 완료된 상품의 최신 현지 가격과 예상 직구가(원화)입니다.
+            {priceSummary}
           </p>
         </div>
 
@@ -287,7 +364,7 @@ export default function MarketProductsPage() {
       {status === "ready" && products.length > 0 && imageRich && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {products.map((p) => (
-            <ProductCard key={p.product_url_id} product={p} />
+            <ProductCard key={p.product_url_id} product={p} market={market} />
           ))}
         </div>
       )}
@@ -332,10 +409,10 @@ export default function MarketProductsPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      예상 직구가
+                      <MarketPriceLabel product={p} market={market} />
                     </div>
                     <div className="mt-1 tabular-nums">
-                      <DirectPriceBlock product={p} />
+                      <MarketPriceBlock product={p} market={market} />
                     </div>
                   </div>
                 </div>
@@ -361,7 +438,9 @@ export default function MarketProductsPage() {
                 <tr className="border-b-2 border-gray-300 text-left text-gray-600 dark:border-gray-700 dark:text-gray-400">
                   <th className="px-3 py-2 font-medium">상품</th>
                   <th className="px-3 py-2 text-right font-medium">현지 가격</th>
-                  <th className="px-3 py-2 text-right font-medium">예상 직구가</th>
+                  <th className="px-3 py-2 text-right font-medium">
+                    {priceColumnLabel}
+                  </th>
                   <th className="px-3 py-2 text-center font-medium">상태</th>
                   <th className="px-3 py-2 font-medium">수집 시각</th>
                   <th className="px-3 py-2 text-right font-medium">구매 링크</th>
@@ -396,7 +475,7 @@ export default function MarketProductsPage() {
                       {formatLocalPrice(p.local_price, p.currency)}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums">
-                      <DirectPriceBlock product={p} />
+                      <MarketPriceBlock product={p} market={market} />
                     </td>
                     <td className="px-3 py-3 text-center">
                       <ProductStatusBadge available={p.available} />
@@ -447,9 +526,9 @@ export default function MarketProductsPage() {
           </div>
 
           <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
-            예상 직구가는 현재 주차 관세청 고시환율 + 마켓 세금설정 + 대표배송(활성
-            배송옵션 최저가) 기준 추정값이며, 실제 통관 세액·배송비와 다를 수
-            있습니다. 정밀 계산은 직구가격 계산 페이지에서 옵션을 직접 입력하세요.
+            {showDirectPriceColumn
+              ? "예상 직구가는 현재 주차 관세청 고시환율 + 마켓 세금설정 + 대표배송(활성 배송옵션 최저가) 기준 추정값이며, 실제 통관 세액·배송비와 다를 수 있습니다. 정밀 계산은 직구가격 계산 페이지에서 옵션을 직접 입력하세요."
+              : "직구를 제공하지 않는 마켓은 예상 직구가 대신 현지 주문 기준 판매가를 원화로 표시합니다."}
           </p>
         </>
       )}

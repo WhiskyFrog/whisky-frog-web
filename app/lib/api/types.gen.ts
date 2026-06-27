@@ -636,6 +636,11 @@ export interface components {
              */
             active: boolean;
             /**
+             * Provides Direct Purchase
+             * @default true
+             */
+            provides_direct_purchase: boolean;
+            /**
              * Vat Rate
              * @default 0
              */
@@ -701,6 +706,8 @@ export interface components {
             base_url: string | null;
             /** Active */
             active: boolean;
+            /** Provides Direct Purchase */
+            provides_direct_purchase: boolean;
             /** Vat Rate */
             vat_rate: string;
             /** Price Includes Vat */
@@ -760,12 +767,22 @@ export interface components {
             crawled_at: string;
             /** Image Url */
             image_url?: string | null;
+            /** Local Price Krw */
+            local_price_krw?: number | null;
             /** Direct Price Krw */
             direct_price_krw?: number | null;
             /** Shipping Krw */
             shipping_krw?: number | null;
             /** Exchange Rate */
             exchange_rate?: string | null;
+            /** Distillery Korean */
+            distillery_korean?: string | null;
+            /** Bottler Korean */
+            bottler_korean?: string | null;
+            /** Cask Korean */
+            cask_korean?: string | null;
+            /** Product Name Korean */
+            product_name_korean?: string | null;
         };
         /**
          * MarketPublicOut
