@@ -221,9 +221,36 @@ export interface paths {
         };
         /**
          * List Active Jobs
-         * @description 진행 중인 모든 수집 잡(상품 크롤 + 환율, 요구사항 #1). 워커 무응답 시 빈 목록.
+         * @description 모든 수집 잡 — 실행 중(active) + 큐 대기(reserved·scheduled) 합산(요구사항 #1).
+         *
+         *     `state` 필드로 작업중/대기중을 구분한다. 워커 무응답 시 빈 목록(best-effort).
+         *     `reserved`= 워커가 가져왔지만 아직 시작 안 한 잡, `scheduled`= ETA 예약 잡.
          */
         get: operations["list_active_jobs_api_admin_crawl_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/crawl/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Queue Depth
+         * @description 브로커 큐에 쌓였지만 아직 어떤 워커도 안 당겨간 잡 수(요구사항 #1 보강).
+         *
+         *     `/jobs`의 active+reserved는 워커가 메모리에 가진 것만 보여준다 — concurrency×prefetch를
+         *     넘겨 쌓이면 나머지는 redis 리스트에 남아 inspect로 안 보인다. 그 분량을 LLEN으로 센다.
+         *     redis 브로커가 아니거나 조회 실패면 length=None(fail-open, 모니터를 막지 않음).
+         */
+        get: operations["queue_depth_api_admin_crawl_queue_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -432,7 +459,7 @@ export interface components {
     schemas: {
         /**
          * ActiveJob
-         * @description 진행 중인 크롤 잡 1건(워커에서 실행 중).
+         * @description 수집 잡 1건. `state`로 실행 중(active) / 큐 대기(reserved·scheduled)를 구분.
          */
         ActiveJob: {
             /** Task Id */
@@ -451,8 +478,16 @@ export interface components {
             kwargs: Record<string, never>;
             /** Worker */
             worker: string;
+            /**
+             * State
+             * @default active
+             * @enum {string}
+             */
+            state: "active" | "reserved" | "scheduled";
             /** Started At */
             started_at?: string | null;
+            /** Eta */
+            eta?: string | null;
         };
         /**
          * CrawlIn
@@ -875,6 +910,19 @@ export interface components {
             last_seen_at: string;
             /** Last Parsed At */
             last_parsed_at: string | null;
+        };
+        /**
+         * QueueDepth
+         * @description 브로커 큐에 적재됐지만 아직 워커가 안 당겨간 잡 수(개수만).
+         *
+         *     `inspect().reserved()`로는 안 보이는 '진짜 대기' 분량. 개별 잡 내용은 알 수 없고
+         *     길이만 센다. redis 브로커가 아니거나 조회 실패 시 `length=None`(best-effort).
+         */
+        QueueDepth: {
+            /** Queue */
+            queue: string;
+            /** Length */
+            length?: number | null;
         };
         /** RevokeOut */
         RevokeOut: {
@@ -1388,6 +1436,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActiveJob"][];
+                };
+            };
+        };
+    };
+    queue_depth_api_admin_crawl_queue_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueDepth"];
                 };
             };
         };

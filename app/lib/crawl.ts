@@ -25,6 +25,30 @@ export interface CrawlJob {
   created_at: string; // ISO datetime
 }
 
+/** 라이브 워커 inspect 잡 상태.
+ *  active=실행 중 · reserved=워커가 가져왔지만 미시작(대기) · scheduled=ETA 예약. */
+export type ActiveJobState = "active" | "reserved" | "scheduled";
+
+/** 라이브 inspect 잡 1건(GET /jobs). 워커 메모리 기준이라 무응답 시 누락 가능(best-effort).
+ *  DB 원장(CrawlJob)과 달리 domain 컬럼이 없고 args/kwargs로만 식별된다. */
+export interface ActiveJob {
+  task_id: string;
+  name: string;
+  args: unknown[];
+  kwargs: Record<string, unknown>;
+  worker: string;
+  state: ActiveJobState;
+  started_at: string | null; // ISO datetime, active일 때
+  eta: string | null; // ISO datetime, scheduled일 때
+}
+
+/** 브로커 큐 적재 깊이(redis LLEN). inspect로 안 보이는 '진짜 대기' overflow 분량(개수만).
+ *  concurrency×prefetch를 넘겨 쌓인 잡 수. redis 브로커가 아니거나 조회 실패면 length=null. */
+export interface QueueDepth {
+  queue: string;
+  length: number | null;
+}
+
 /** beat 스케줄 1건(정기 크롤 예정). schedule은 celery beat 정의 문자열. */
 export interface ScheduleEntry {
   name: string;
@@ -81,6 +105,29 @@ export async function listCrawlHistory(
   });
   await ensureOk(res);
   return (await res.json()) as CrawlJob[];
+}
+
+/** 라이브 진행/대기 잡 목록(워커 inspect). active(실행 중)+reserved/scheduled(큐 대기) 합산.
+ *  워커 무응답 시 빈 목록(best-effort) — 진행 중 원장 조회와 별개로 보조 신호로만 쓴다. */
+export async function listActiveJobs(signal?: AbortSignal): Promise<ActiveJob[]> {
+  const res = await fetch(`${base}/jobs`, {
+    signal,
+    cache: "no-store",
+    headers: authHeaders(),
+  });
+  await ensureOk(res);
+  return (await res.json()) as ActiveJob[];
+}
+
+/** 브로커 큐 적재 깊이 — inspect로 안 보이는 overflow 대기량(개수만). */
+export async function getQueueDepth(signal?: AbortSignal): Promise<QueueDepth> {
+  const res = await fetch(`${base}/queue`, {
+    signal,
+    cache: "no-store",
+    headers: authHeaders(),
+  });
+  await ensureOk(res);
+  return (await res.json()) as QueueDepth;
 }
 
 /** beat 정기 스케줄 목록. */

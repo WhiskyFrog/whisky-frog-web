@@ -5,10 +5,13 @@ import { listMarkets, type Market } from "../../lib/markets";
 import { actionBtn } from "../../components/actionButton";
 import {
   getJobStatus,
+  getQueueDepth,
+  listActiveJobs,
   listCrawlHistory,
   listSchedule,
   revokeJob,
   triggerSchedule,
+  type ActiveJob,
   type CrawlJob,
   type CrawlStatus,
   type ScheduleEntry,
@@ -35,6 +38,9 @@ const STATUS_BADGE: Record<string, string> = {
   running: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
   failure: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
   revoked: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+  reserved: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  scheduled:
+    "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300",
 };
 
 function badgeCls(status: string): string {
@@ -43,6 +49,12 @@ function badgeCls(status: string): string {
     "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
   );
 }
+
+/** 큐 대기 잡 상태 → 한글 라벨. */
+const QUEUED_LABEL: Record<string, string> = {
+  reserved: "대기 중",
+  scheduled: "예약됨",
+};
 
 /** ISO datetime → "YYYY.MM.DD HH:mm:ss" (로컬). null이면 "–". */
 function formatDateTime(iso: string | null): string {
@@ -113,16 +125,22 @@ export default function CrawlsAdminPage() {
 }
 
 // ── 진행 중 ──────────────────────────────────────────────
-// 데이터 소스 = DB 원장(history?status=running). 라이브 워커 inspect(/crawl/jobs)는
-// 워커가 바쁘면 간헐적으로 빈 응답을 주어 "있었다 없었다" 깜빡임이 생기므로 쓰지 않는다.
+// 데이터 소스 2종:
+//  1) 작업 중(running) = DB 원장(history?status=running). 라이브 inspect는 워커가 바쁘면
+//     간헐적으로 빈 응답을 주어 깜빡임이 생기므로 '실행 중' 판정은 원장으로 한다.
+//  2) 큐 대기(reserved/scheduled) + 브로커 큐 깊이 = 라이브 inspect(/jobs, /queue).
+//     원장에는 안 남는 '아직 시작 안 한' 잡이라 inspect로만 보인다 → best-effort(실패해도 1을 안 막음).
 function ActiveTab() {
   const [status, setStatus] = useState<Status>("loading");
-  const [rows, setRows] = useState<CrawlJob[]>([]);
+  const [rows, setRows] = useState<CrawlJob[]>([]); // 작업 중(원장)
+  const [queued, setQueued] = useState<ActiveJob[]>([]); // 큐 대기(inspect)
+  const [queueDepth, setQueueDepth] = useState<number | null>(null); // 브로커 overflow 깊이
   const [errorMsg, setErrorMsg] = useState("");
   const [, setTick] = useState(0); // 경과시간 라이브 갱신용 리렌더 트리거
   const [busy, setBusy] = useState<string | null>(null); // revoke 진행 중 task_id
 
   const load = useCallback((signal?: AbortSignal) => {
+    // (1) 작업 중 — 핵심 신호. 실패하면 에러 상태로.
     listCrawlHistory({ status: "running", limit: 100 }, signal)
       .then((data) => {
         setRows(data);
@@ -132,6 +150,18 @@ function ActiveTab() {
         if (signal?.aborted) return;
         setErrorMsg(err instanceof Error ? err.message : "알 수 없는 오류");
         setStatus("error");
+      });
+
+    // (2) 큐 대기 — 보조 신호. 워커 무응답·redis 미사용이면 조용히 빈 값(목록을 막지 않음).
+    listActiveJobs(signal)
+      .then((jobs) => setQueued(jobs.filter((j) => j.state !== "active")))
+      .catch(() => {
+        if (!signal?.aborted) setQueued([]);
+      });
+    getQueueDepth(signal)
+      .then((d) => setQueueDepth(d.length))
+      .catch(() => {
+        if (!signal?.aborted) setQueueDepth(null);
       });
   }, []);
 
@@ -174,10 +204,13 @@ function ActiveTab() {
   if (status === "error") {
     return <ErrorBox msg={errorMsg} onRetry={() => load()} label="작업" />;
   }
-  if (rows.length === 0) {
+
+  const depthExtra = queueDepth != null && queueDepth > 0 ? queueDepth : 0;
+  const isEmpty = rows.length === 0 && queued.length === 0 && depthExtra === 0;
+  if (isEmpty) {
     return (
       <EmptyBox
-        title="진행 중인 작업이 없습니다."
+        title="진행 중이거나 대기 중인 작업이 없습니다."
         sub={`${POLL_MS / 1000}초마다 자동 새로고침됩니다.`}
       />
     );
@@ -185,65 +218,146 @@ function ActiveTab() {
 
   return (
     <div className="overflow-x-auto">
-      <div className="mb-2 text-xs text-gray-400 dark:text-gray-500">
-        ↻ {POLL_MS / 1000}초마다 자동 새로고침 · 상태 원장(running) 기준
+      <div className="mb-3 text-xs text-gray-400 dark:text-gray-500">
+        ↻ {POLL_MS / 1000}초마다 자동 새로고침 · 작업 중은 상태 원장(running),
+        대기 중은 워커 큐(inspect) 기준
       </div>
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b-2 border-gray-300 text-left text-gray-600 dark:border-gray-600 dark:text-gray-400">
-            <th className="px-3 py-2 font-medium">작업 / 도메인</th>
-            <th className="px-3 py-2 font-medium">시작시각</th>
-            <th className="px-3 py-2 font-medium">경과</th>
-            <th className="px-3 py-2 text-right font-medium">동작</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((j) => (
-            <tr
-              key={j.task_id}
-              className="border-b border-gray-100 align-top hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
-            >
-              <td className="px-3 py-2">
-                <div className="font-medium text-gray-900 dark:text-gray-100">
-                  {j.name}
-                  {j.domain && (
-                    <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">
-                      · {j.domain}
+
+      {/* 작업 중(실행 중) */}
+      {rows.length > 0 && (
+        <section className="mb-6">
+          <h3 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            작업 중{" "}
+            <span className="font-normal text-gray-400 dark:text-gray-500">
+              ({rows.length})
+            </span>
+          </h3>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b-2 border-gray-300 text-left text-gray-600 dark:border-gray-600 dark:text-gray-400">
+                <th className="px-3 py-2 font-medium">작업 / 도메인</th>
+                <th className="px-3 py-2 font-medium">시작시각</th>
+                <th className="px-3 py-2 font-medium">경과</th>
+                <th className="px-3 py-2 text-right font-medium">동작</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((j) => (
+                <tr
+                  key={j.task_id}
+                  className="border-b border-gray-100 align-top hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
+                >
+                  <td className="px-3 py-2">
+                    <div className="font-medium text-gray-900 dark:text-gray-100">
+                      {j.name}
+                      {j.domain && (
+                        <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">
+                          · {j.domain}
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono text-[11px] text-gray-400 dark:text-gray-500">
+                      {j.task_id}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                    {formatDateTime(j.started_at)}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-600 dark:text-gray-400">
+                    {formatDuration(j.started_at, null)}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        onClick={() => handleRevoke(j.task_id, false)}
+                        disabled={busy === j.task_id}
+                        className={actionBtn.warn}
+                      >
+                        종료
+                      </button>
+                      <button
+                        onClick={() => handleRevoke(j.task_id, true)}
+                        disabled={busy === j.task_id}
+                        className={actionBtn.danger}
+                      >
+                        강제 종료
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {/* 큐 대기(reserved/scheduled) */}
+      {queued.length > 0 && (
+        <section className="mb-4">
+          <h3 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            대기 중{" "}
+            <span className="font-normal text-gray-400 dark:text-gray-500">
+              ({queued.length})
+            </span>
+          </h3>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b-2 border-gray-300 text-left text-gray-600 dark:border-gray-600 dark:text-gray-400">
+                <th className="px-3 py-2 font-medium">작업</th>
+                <th className="px-3 py-2 text-center font-medium">상태</th>
+                <th className="px-3 py-2 font-medium">예약시각(ETA)</th>
+                <th className="px-3 py-2 text-right font-medium">동작</th>
+              </tr>
+            </thead>
+            <tbody>
+              {queued.map((j) => (
+                <tr
+                  key={j.task_id}
+                  className="border-b border-gray-100 align-top hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
+                >
+                  <td className="px-3 py-2">
+                    <div className="font-medium text-gray-900 dark:text-gray-100">
+                      {j.name}
+                    </div>
+                    <div className="font-mono text-[11px] text-gray-400 dark:text-gray-500">
+                      {j.task_id}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <span
+                      className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${badgeCls(j.state)}`}
+                    >
+                      {QUEUED_LABEL[j.state] ?? j.state}
                     </span>
-                  )}
-                </div>
-                <div className="font-mono text-[11px] text-gray-400 dark:text-gray-500">
-                  {j.task_id}
-                </div>
-              </td>
-              <td className="px-3 py-2 whitespace-nowrap text-gray-600 dark:text-gray-400">
-                {formatDateTime(j.started_at)}
-              </td>
-              <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-600 dark:text-gray-400">
-                {formatDuration(j.started_at, null)}
-              </td>
-              <td className="px-3 py-2 whitespace-nowrap">
-                <div className="flex justify-end gap-1.5">
-                  <button
-                    onClick={() => handleRevoke(j.task_id, false)}
-                    disabled={busy === j.task_id}
-                    className={actionBtn.warn}
-                  >
-                    종료
-                  </button>
-                  <button
-                    onClick={() => handleRevoke(j.task_id, true)}
-                    disabled={busy === j.task_id}
-                    className={actionBtn.danger}
-                  >
-                    강제 종료
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                    {j.state === "scheduled" ? formatDateTime(j.eta) : "–"}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => handleRevoke(j.task_id, false)}
+                        disabled={busy === j.task_id}
+                        className={actionBtn.warn}
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {/* 브로커 큐 overflow 깊이 — 워커가 아직 안 가져간 분량 */}
+      {depthExtra > 0 && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+          브로커 큐에 <b>{depthExtra}건</b>이 더 쌓여 있습니다 — 아직 워커가
+          가져가지 않은 대기 분량(위 목록에는 표시되지 않음).
+        </p>
+      )}
     </div>
   );
 }
