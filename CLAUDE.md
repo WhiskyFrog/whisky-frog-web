@@ -40,3 +40,9 @@
 
 ## 스택 / 현재 화면
 - Next.js 15 + Tailwind. 기존: 환율표(`/exchange-rates`), 관리자 마켓(`/admin/markets`), 홈 TopNav.
+
+## Project Boundary / Cross-Repo Rule
+- This session owns only the `whisky-frog-web` frontend project.
+- Sibling or backend/private projects such as `../whisky-frog-lab`, `../wb-api`, `../wb-crawler`, `../wb-processing`, and `../wb-infra-api` may be read only for context when needed.
+- Never modify files, commit, push, run migrations, or trigger deployments in another project without explicit user approval for that exact project and action.
+- If a fix appears to require another project, stop at diagnosis, explain the suspected change, and ask the user before touching that project.
