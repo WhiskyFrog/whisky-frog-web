@@ -1,6 +1,14 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
 import {
   listCrawlHistory,
@@ -18,9 +26,40 @@ import { triggerProcessing } from "../../lib/processing";
 function runningDomainSet(jobs: CrawlJob[]): Set<string> {
   const s = new Set<string>();
   for (const j of jobs) {
-    if (j.domain) s.add(j.domain);
+    if (j.domain && j.name.startsWith("crawler.")) s.add(j.domain);
   }
   return s;
+}
+
+function processingDomainSet(jobs: CrawlJob[]): Set<string> {
+  const s = new Set<string>();
+  for (const j of jobs) {
+    if (j.domain && j.name === "processing.run_batch") s.add(j.domain);
+  }
+  return s;
+}
+
+// 방금 트리거한 도메인의 낙관적 잠금 유지 시간(ms).
+// 잡이 Celery에 enqueue된 직후엔 history?status=running에 아직 안 올라와,
+// 폴링이 runningDomains를 통째 교체하며 낙관적 잠금을 지워버린다(깜빡임).
+// 그래서 폴링과 무관한 별도 집합에 도메인을 넣고 이 시간 동안 잠금을 보장한다.
+// 그 안에 폴링이 잡을 running으로 확인하면 runningDomains가 잠금을 이어받는다.
+const PENDING_LOCK_MS = 30000;
+
+/** domain을 집합에 추가하고 PENDING_LOCK_MS 후 자동 제거(폴링이 못 덮어쓰는 낙관적 잠금). */
+function lockPending(
+  setter: Dispatch<SetStateAction<Set<string>>>,
+  domain: string,
+) {
+  setter((s) => new Set(s).add(domain));
+  setTimeout(() => {
+    setter((s) => {
+      if (!s.has(domain)) return s;
+      const next = new Set(s);
+      next.delete(domain);
+      return next;
+    });
+  }, PENDING_LOCK_MS);
 }
 
 type Status = "loading" | "error" | "ready";
@@ -41,6 +80,33 @@ export default function MarketsAdminPage() {
   const [processing, setProcessing] = useState<number | null>(null);
   // 현재 크롤 진행 중인 마켓 도메인(버튼 잠금용). 백엔드가 최종 가드지만 UI도 선제 차단.
   const [runningDomains, setRunningDomains] = useState<Set<string>>(new Set());
+  const [processingDomains, setProcessingDomains] = useState<Set<string>>(new Set());
+  // 방금 트리거한 도메인(낙관적 잠금) — 폴링이 덮어쓰지 못하는 별도 집합. lockPending 참고.
+  const [pendingDomains, setPendingDomains] = useState<Set<string>>(new Set());
+  const [pendingProcessing, setPendingProcessing] = useState<Set<string>>(
+    new Set(),
+  );
+  // 비블로킹 알림(window.alert 대체) — alert은 메인스레드를 막아 잠금 페인트를 삼킴.
+  const [toast, setToast] = useState<{ kind: "info" | "error"; msg: string } | null>(
+    null,
+  );
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((msg: string, kind: "info" | "error" = "info") => {
+    setToast({ kind, msg });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(
+      () => setToast(null),
+      kind === "error" ? 6000 : 4000,
+    );
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    },
+    [],
+  );
 
   const load = useCallback((signal?: AbortSignal) => {
     setStatus("loading");
@@ -65,7 +131,10 @@ export default function MarketsAdminPage() {
   // 진행 중 마켓 추적 — 버튼 잠금/해제. 끝나면 자동으로 풀리도록 주기 폴링(DB 원장 기반).
   const refreshActive = useCallback((signal?: AbortSignal) => {
     listCrawlHistory({ status: "running", limit: 200 }, signal)
-      .then((jobs) => setRunningDomains(runningDomainSet(jobs)))
+      .then((jobs) => {
+        setRunningDomains(runningDomainSet(jobs));
+        setProcessingDomains(processingDomainSet(jobs));
+      })
       .catch(() => {
         /* 조회 실패는 무시(백엔드 락/409가 최종 가드) */
       });
@@ -88,7 +157,7 @@ export default function MarketsAdminPage() {
       await deleteMarket(m.id);
       load();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "삭제 실패");
+      showToast(err instanceof Error ? err.message : "삭제 실패", "error");
     }
   }
 
@@ -109,7 +178,7 @@ export default function MarketsAdminPage() {
     if (trimmed !== "") {
       const n = Number(trimmed);
       if (!Number.isInteger(n) || n <= 0) {
-        window.alert("페이지 수는 1 이상의 정수여야 합니다.");
+        showToast("페이지 수는 1 이상의 정수여야 합니다.", "error");
         return;
       }
       maxPages = n;
@@ -117,22 +186,22 @@ export default function MarketsAdminPage() {
     setCrawling(m.id);
     try {
       await triggerCrawl(m.id, maxPages);
-      // 즉시 잠금(낙관적) + 활성 잡 동기화.
-      setRunningDomains((s) => new Set(s).add(m.domain));
+      // 즉시 잠금(낙관적, 폴링이 못 덮어씀) + 활성 잡 동기화.
+      lockPending(setPendingDomains, m.domain);
       refreshActive();
-      window.alert(
-        `수집 작업을 등록했습니다. '데이터 수집 관리 > 진행 중'에서 상태를 확인하세요.`,
+      showToast(
+        "수집 작업을 등록했습니다. '데이터 수집 관리 > 진행 중'에서 상태를 확인하세요.",
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "수집 실행 실패";
       // 409: 이미 진행 중(연타 방지) → 에러 대신 안내하고 버튼 잠금.
       if (/already running|진행 중|409/i.test(msg)) {
-        setRunningDomains((s) => new Set(s).add(m.domain));
-        window.alert(
+        lockPending(setPendingDomains, m.domain);
+        showToast(
           "이미 이 마켓 수집이 진행 중입니다. '데이터 수집 관리 > 진행 중'에서 확인하세요.",
         );
       } else {
-        window.alert(msg);
+        showToast(msg, "error");
       }
     } finally {
       setCrawling(null);
@@ -151,7 +220,7 @@ export default function MarketsAdminPage() {
     if (trimmed !== "") {
       const n = Number(trimmed);
       if (!Number.isInteger(n) || n <= 0) {
-        window.alert("건수는 1 이상의 정수여야 합니다.");
+        showToast("건수는 1 이상의 정수여야 합니다.", "error");
         return;
       }
       limit = n;
@@ -160,21 +229,21 @@ export default function MarketsAdminPage() {
     try {
       await triggerParse(m.id, limit);
       // 파싱은 수집과 같은 마켓 락을 공유 → 낙관적 잠금 + 활성 잡 동기화.
-      setRunningDomains((s) => new Set(s).add(m.domain));
+      lockPending(setPendingDomains, m.domain);
       refreshActive();
-      window.alert(
-        `상세 파싱 작업을 등록했습니다. '데이터 수집 관리 > 진행 중'에서 상태를 확인하세요.`,
+      showToast(
+        "상세 파싱 작업을 등록했습니다. '데이터 수집 관리 > 진행 중'에서 상태를 확인하세요.",
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "상세 파싱 실행 실패";
       // 409: 같은 마켓 수집/파싱이 이미 진행 중(락 공유) → 안내 후 버튼 잠금.
       if (/already running|진행 중|409/i.test(msg)) {
-        setRunningDomains((s) => new Set(s).add(m.domain));
-        window.alert(
+        lockPending(setPendingDomains, m.domain);
+        showToast(
           "이미 이 마켓 수집/파싱이 진행 중입니다. '데이터 수집 관리 > 진행 중'에서 확인하세요.",
         );
       } else {
-        window.alert(msg);
+        showToast(msg, "error");
       }
     } finally {
       setParsing(null);
@@ -192,7 +261,7 @@ export default function MarketsAdminPage() {
     if (trimmed !== "") {
       const n = Number(trimmed);
       if (!Number.isInteger(n) || n <= 0) {
-        window.alert("건수는 1 이상의 정수여야 합니다.");
+        showToast("건수는 1 이상의 정수여야 합니다.", "error");
         return;
       }
       limit = n;
@@ -201,15 +270,21 @@ export default function MarketsAdminPage() {
     setProcessing(m.id);
     try {
       await triggerProcessing(m.id, limit);
-      window.alert(
-        `프로세싱 작업이 등록됐습니다. '${m.name}' 마켓만 처리합니다.`,
+      lockPending(setPendingProcessing, m.domain);
+      refreshActive();
+      showToast(
+        `프로세싱 작업이 등록됐습니다. '데이터 수집 관리 > 진행 중'에서 상태를 확인하세요. '${m.name}' 마켓만 처리합니다.`,
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "프로세싱 실행 실패";
       if (/already running|진행 중|409/i.test(msg)) {
-        window.alert("이미 프로세싱 작업이 진행 중입니다. 잠시 후 다시 시도하세요.");
+        lockPending(setPendingProcessing, m.domain);
+        refreshActive();
+        showToast(
+          "이미 프로세싱 작업이 진행 중입니다. '데이터 수집 관리 > 진행 중'에서 확인하세요.",
+        );
       } else {
-        window.alert(msg);
+        showToast(msg, "error");
       }
     } finally {
       setProcessing(null);
@@ -237,6 +312,29 @@ export default function MarketsAdminPage() {
 
   return (
     <div>
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+          <div
+            className={
+              toast.kind === "error"
+                ? "rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-lg dark:border-red-800 dark:bg-red-950 dark:text-red-200"
+                : "rounded-md border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            }
+          >
+            <div className="flex items-start gap-3">
+              <span className="whitespace-pre-wrap">{toast.msg}</span>
+              <button
+                onClick={() => setToast(null)}
+                aria-label="닫기"
+                className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">마켓 관리</h2>
@@ -358,13 +456,16 @@ export default function MarketsAdminPage() {
                         <button
                           onClick={() => handleCrawl(m)}
                           disabled={
-                            crawling === m.id || runningDomains.has(m.domain)
+                            crawling === m.id ||
+                            runningDomains.has(m.domain) ||
+                            pendingDomains.has(m.domain)
                           }
                           className={actionBtn.run}
                         >
                           {crawling === m.id
                             ? "실행 중…"
-                            : runningDomains.has(m.domain)
+                            : runningDomains.has(m.domain) ||
+                                pendingDomains.has(m.domain)
                               ? "진행 중"
                               : "수집 실행"}
                         </button>
@@ -373,7 +474,8 @@ export default function MarketsAdminPage() {
                           disabled={
                             parsing === m.id ||
                             crawling === m.id ||
-                            runningDomains.has(m.domain)
+                            runningDomains.has(m.domain) ||
+                            pendingDomains.has(m.domain)
                           }
                           className={actionBtn.accent}
                         >
@@ -381,10 +483,18 @@ export default function MarketsAdminPage() {
                         </button>
                         <button
                           onClick={() => handleProcess(m)}
-                          disabled={processing === m.id}
+                          disabled={
+                            processing === m.id ||
+                            processingDomains.has(m.domain) ||
+                            pendingProcessing.has(m.domain)
+                          }
                           className={actionBtn.accent}
                         >
-                          {processing === m.id ? "처리 중…" : "프로세스"}
+                          {processing === m.id ||
+                          processingDomains.has(m.domain) ||
+                          pendingProcessing.has(m.domain)
+                            ? "처리 중…"
+                            : "프로세스"}
                         </button>
                         <button
                           onClick={() => setView({ mode: "urls", market: m })}
