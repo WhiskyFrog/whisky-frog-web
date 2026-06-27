@@ -416,6 +416,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/processing/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reviews
+         * @description 사람 검수 대기 목록(저신뢰/충돌 분류) — q:review 우선순위 순.
+         *
+         *     각 항목에 '왜 애매한지'(모델별 답·속성별 합의·전체 일치도)를 함께 내려 UI가 한 번에
+         *     리스트+근거를 렌더한다. 이미 검수된(reviewed_at) 큐 잔재는 제외한다.
+         */
+        get: operations["list_reviews_api_admin_processing_reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/processing/reviews/{product_url_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve Review Item
+         * @description 운영자가 확정한 속성으로 적재하고 검수를 종료한다.
+         *
+         *     products/product_aliases(source='human')/price_history 적재 + URL matched(confidence=1.0),
+         *     classification_runs.reviewed_at 기록, q:review에서 제거. 대상 URL이 없으면 404.
+         *     사람이 고친 표기가 위키(alias)에 축적돼 재크롤 시 LLM 없이 재현된다(학습 루프).
+         */
+        post: operations["resolve_review_item_api_admin_processing_reviews__product_url_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -880,6 +927,32 @@ export interface components {
             market_id?: number | null;
         };
         /**
+         * ProductCaskAttribute
+         * @description LLM이 반환하는 제품 캐스크 구성 1단계.
+         */
+        ProductCaskAttribute: {
+            /**
+             * Cask Type
+             * @description Cask type such as Bourbon, Sherry, Oloroso, Port, or null.
+             */
+            cask_type?: string | null;
+            /**
+             * Role
+             * @description maturation or finish.
+             */
+            role: string;
+            /**
+             * Seq
+             * @description Order in the cask sequence, starting at 0.
+             */
+            seq: number;
+            /**
+             * Finish Months
+             * @description Finish duration in months, if known.
+             */
+            finish_months?: number | null;
+        };
+        /**
          * ProductUrlOut
          * @description 크롤러 ①이 모은 상품 URL 1건(발견 원장 + ②단계 파싱 커서).
          */
@@ -923,6 +996,116 @@ export interface components {
             queue: string;
             /** Length */
             length?: number | null;
+        };
+        /**
+         * ReviewListItem
+         * @description 검수 대기 1건 — 식별/우선순위 + '왜 애매한지' 근거(classification_runs).
+         */
+        ReviewListItem: {
+            /** Product Url Id */
+            product_url_id: number;
+            /** Name */
+            name?: string | null;
+            /** Url */
+            url?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Market Id */
+            market_id: number;
+            /** Market Code */
+            market_code?: string | null;
+            /** Market Domain */
+            market_domain?: string | null;
+            /** Priority */
+            priority?: number | null;
+            /** Norm Abv */
+            norm_abv?: string | null;
+            /** Norm Volume Ml */
+            norm_volume_ml?: number | null;
+            /** Run Id */
+            run_id?: number | null;
+            /** Method */
+            method?: string | null;
+            /** Agreement */
+            agreement?: number | null;
+            /** Consensus */
+            consensus?: Record<string, never> | null;
+            /** Model Outputs */
+            model_outputs?: unknown[] | null;
+            /** Needs Review */
+            needs_review?: boolean | null;
+            /** Run Created At */
+            run_created_at?: string | null;
+        };
+        /**
+         * ReviewResolveIn
+         * @description 운영자가 확정한 위스키 속성(LLM 분류와 동형). confidence는 서버가 1.0으로 고정.
+         */
+        ReviewResolveIn: {
+            /** Distillery */
+            distillery?: string | null;
+            /** Bottler */
+            bottler?: string | null;
+            /** Brand */
+            brand?: string | null;
+            /** Cask Type */
+            cask_type?: string | null;
+            /** Age Years */
+            age_years?: number | null;
+            /** Edition */
+            edition?: string | null;
+            /**
+             * Spirit Type
+             * @default whisky
+             */
+            spirit_type: string;
+            /** Vintage Year */
+            vintage_year?: number | null;
+            /** Peated */
+            peated?: boolean | null;
+            /** Product Casks */
+            product_casks?: components["schemas"]["ProductCaskAttribute"][];
+            korean?: components["schemas"]["WhiskyKoreanAttributes"];
+        };
+        /**
+         * ReviewResolveOut
+         * @description 검수 확정 결과 — 적재/매칭 건수.
+         */
+        ReviewResolveOut: {
+            /** Product Url Id */
+            product_url_id: number;
+            /** Product Id */
+            product_id?: number | null;
+            /**
+             * Products Inserted
+             * @default 0
+             */
+            products_inserted: number;
+            /**
+             * Urls Matched
+             * @default 0
+             */
+            urls_matched: number;
+            /**
+             * Aliases Inserted
+             * @default 0
+             */
+            aliases_inserted: number;
+            /**
+             * Prices Inserted
+             * @default 0
+             */
+            prices_inserted: number;
+            /**
+             * Product Casks Inserted
+             * @default 0
+             */
+            product_casks_inserted: number;
+            /**
+             * Runs Reviewed
+             * @default 0
+             */
+            runs_reviewed: number;
         };
         /** RevokeOut */
         RevokeOut: {
@@ -1012,6 +1195,42 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * WhiskyKoreanAttributes
+         * @description 한국어 운영 UI/검색 보조용 속성 표기.
+         */
+        WhiskyKoreanAttributes: {
+            /**
+             * Distillery
+             * @description Korean display name for distillery.
+             */
+            distillery?: string | null;
+            /**
+             * Bottler
+             * @description Korean display name for bottler.
+             */
+            bottler?: string | null;
+            /**
+             * Brand
+             * @description Korean display name for brand.
+             */
+            brand?: string | null;
+            /**
+             * Cask Type
+             * @description Korean display name for cask type.
+             */
+            cask_type?: string | null;
+            /**
+             * Edition
+             * @description Korean display text for edition/batch.
+             */
+            edition?: string | null;
+            /**
+             * Spirit Type
+             * @description Korean display name for spirit type.
+             */
+            spirit_type?: string | null;
         };
     };
     responses: never;
@@ -1662,6 +1881,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reviews_api_admin_processing_reviews_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_review_item_api_admin_processing_reviews__product_url_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_url_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewResolveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResolveOut"];
                 };
             };
             /** @description Validation Error */

@@ -9,6 +9,7 @@ import { isAuthed, logout } from "../lib/auth";
 const MENU = [
   { href: "/admin/markets", label: "마켓 관리" },
   { href: "/admin/crawls", label: "데이터 수집 관리" },
+  { href: "/admin/reviews", label: "검토" },
 ];
 
 export default function AdminLayout({
