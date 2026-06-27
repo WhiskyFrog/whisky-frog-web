@@ -155,8 +155,8 @@ function ProductStatusBadge({ available }: { available: boolean }) {
     <span
       className={
         available
-          ? "rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950/50 dark:text-green-300"
-          : "rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+          ? "shrink-0 whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950/50 dark:text-green-300"
+          : "shrink-0 whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400"
       }
     >
       {available ? "판매중" : "품절"}
@@ -180,17 +180,19 @@ function ProductCard({
         className="aspect-square w-full border-b border-gray-100 dark:border-gray-800"
       />
       <div className="flex flex-1 flex-col p-3">
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="line-clamp-2 min-w-0 font-medium leading-5 text-gray-900 dark:text-gray-100">
-            {p.product_name}
-          </h2>
-          <ProductStatusBadge available={p.available} />
-        </div>
+        {/* 제목은 가로폭을 다 쓰게 두고(최대 2줄), 상태 배지는 아래 줄에 배치.
+            좁은 카드에서 제목 옆에 끼우면 '판매중'이 세로로 깨지므로 분리한다. */}
+        <h2 className="line-clamp-2 font-medium leading-5 text-gray-900 dark:text-gray-100">
+          {p.product_name}
+        </h2>
         {p.raw_name && p.raw_name !== p.product_name && (
           <p className="mt-1 line-clamp-1 text-xs leading-4 text-gray-500 dark:text-gray-400">
             {p.raw_name}
           </p>
         )}
+        <div className="mt-1.5">
+          <ProductStatusBadge available={p.available} />
+        </div>
 
         <div className="mt-auto pt-3">
           <div className="flex items-end justify-between gap-2">
