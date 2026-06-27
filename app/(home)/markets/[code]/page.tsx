@@ -101,6 +101,65 @@ function ProductStatusBadge({ available }: { available: boolean }) {
   );
 }
 
+/** 이미지 중심 카드 — 이미지가 잘 나오는 마켓(위스키피플 등)에서 그리드로 노출. */
+function ProductCard({ product: p }: { product: MarketProduct }) {
+  return (
+    <article className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+      <ProductThumb
+        src={p.image_url}
+        alt={p.product_name}
+        className="aspect-square w-full border-b border-gray-100 dark:border-gray-800"
+      />
+      <div className="flex flex-1 flex-col p-3">
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="line-clamp-2 min-w-0 font-medium leading-5 text-gray-900 dark:text-gray-100">
+            {p.product_name}
+          </h2>
+          <ProductStatusBadge available={p.available} />
+        </div>
+        {p.raw_name && p.raw_name !== p.product_name && (
+          <p className="mt-1 line-clamp-1 text-xs leading-4 text-gray-500 dark:text-gray-400">
+            {p.raw_name}
+          </p>
+        )}
+
+        <div className="mt-auto pt-3">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                현지 가격
+              </div>
+              <div className="mt-0.5 whitespace-nowrap font-medium tabular-nums">
+                {formatLocalPrice(p.local_price, p.currency)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                예상 직구가
+              </div>
+              <div className="mt-0.5 tabular-nums">
+                <DirectPriceBlock product={p} />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+            <span>{formatDateTime(p.crawled_at)}</span>
+            <Link
+              href={p.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+            >
+              구매 링크
+            </Link>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export default function MarketProductsPage() {
   const params = useParams<{ code: string }>();
   const marketCode = params.code;
@@ -157,6 +216,14 @@ export default function MarketProductsPage() {
   const hasPrev = offset > 0;
   const hasNext = products.length === PAGE_SIZE;
   const title = market?.name ?? marketCode;
+
+  // 이미지가 잘 나오는 마켓(위스키피플 등) 판별 — 상품 절반 이상이 이미지를 가지면
+  // 테이블 대신 이미지 중심 카드 그리드(큰 화면 한 줄 4개)로 노출.
+  const imageRich = useMemo(() => {
+    if (products.length === 0) return false;
+    const withImage = products.filter((p) => p.image_url).length;
+    return withImage / products.length >= 0.5;
+  }, [products]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -217,7 +284,15 @@ export default function MarketProductsPage() {
         </div>
       )}
 
-      {status === "ready" && products.length > 0 && (
+      {status === "ready" && products.length > 0 && imageRich && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {products.map((p) => (
+            <ProductCard key={p.product_url_id} product={p} />
+          ))}
+        </div>
+      )}
+
+      {status === "ready" && products.length > 0 && !imageRich && (
         <>
           <div className="space-y-3 sm:hidden">
             {products.map((p) => (
@@ -344,7 +419,11 @@ export default function MarketProductsPage() {
               </tbody>
             </table>
           </div>
+        </>
+      )}
 
+      {status === "ready" && products.length > 0 && (
+        <>
           <div className="mt-4 flex items-center justify-between text-sm">
             <span className="text-gray-500 dark:text-gray-400">
               {page}페이지 · {products.length}건 표시
