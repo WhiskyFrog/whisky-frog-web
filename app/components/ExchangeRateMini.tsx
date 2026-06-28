@@ -94,7 +94,7 @@ export function ExchangeRateMini() {
             aria-label="환율표 최소화"
             className="-mr-1 flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
-            <span aria-hidden className="leading-none">
+            <span aria-hidden className="block h-0.5 w-3 overflow-hidden rounded-full bg-current text-transparent">
               ─
             </span>
           </button>

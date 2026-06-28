@@ -9,7 +9,12 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import { deleteMarket, listMarkets, type Market } from "../../lib/markets";
+import {
+  deleteMarket,
+  listMarkets,
+  type Market,
+  type PipelineStage,
+} from "../../lib/markets";
 import {
   listCrawlHistory,
   triggerCrawl,
@@ -37,6 +42,81 @@ function processingDomainSet(jobs: CrawlJob[]): Set<string> {
     if (j.domain && j.name === "processing.run_batch") s.add(j.domain);
   }
   return s;
+}
+
+const PIPELINE_STAGES: Array<{
+  key: "listing" | "detail" | "processing";
+  label: string;
+}> = [
+  { key: "listing", label: "목록" },
+  { key: "detail", label: "상세" },
+  { key: "processing", label: "가공" },
+];
+
+function formatPipelineTime(stage: PipelineStage): string {
+  const iso = stage.last_finished_at ?? stage.started_at;
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
+function pipelineClass(status: string | null | undefined): string {
+  if (status === "success") {
+    return "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300";
+  }
+  if (status === "running") {
+    return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300";
+  }
+  if (status === "failure") {
+    return "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300";
+  }
+  if (status === "revoked") {
+    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300";
+  }
+  return "border-gray-200 bg-gray-50 text-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-500";
+}
+
+function PipelineSummary({ market }: { market: Market }) {
+  return (
+    <div className="flex flex-wrap justify-center gap-1.5">
+      {PIPELINE_STAGES.map(({ key, label }) => {
+        const stage = market.pipeline?.[key] ?? null;
+        const status = stage?.status ?? null;
+        const count =
+          stage?.result_count == null ? "" : ` · ${stage.result_count}건`;
+        const time = stage ? formatPipelineTime(stage) : "";
+        const title = stage
+          ? `${label}: ${status ?? "없음"}${count}${time ? ` · ${time}` : ""}${stage.scope === "global" ? " · 전체크롤" : ""}`
+          : `${label}: 이력 없음`;
+        return (
+          <span
+            key={key}
+            title={title}
+            className={`inline-flex min-w-14 items-center justify-center rounded border px-2 py-1 text-xs font-medium ${pipelineClass(status)}`}
+          >
+            {label}
+            <span className="ml-1 tabular-nums">
+              {status === "running"
+                ? "진행"
+                : status === "success"
+                  ? "완료"
+                  : status === "failure"
+                    ? "실패"
+                    : status === "revoked"
+                      ? "중단"
+                      : "-"}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 // 방금 트리거한 도메인의 낙관적 잠금 유지 시간(ms).
@@ -419,7 +499,10 @@ export default function MarketsAdminPage() {
                       rowSpan={2}
                       className="border-b border-gray-100 px-3 py-2 align-top text-gray-600 dark:border-gray-800 dark:text-gray-400"
                     >
-                      {m.domain}
+                      <div>{m.domain}</div>
+                      <div className="mt-2">
+                        <PipelineSummary market={m} />
+                      </div>
                     </td>
                     <td
                       rowSpan={2}

@@ -13,6 +13,20 @@ export interface ShippingOption {
 }
 
 /** 생성/수정 요청 본문 (MarketInput). */
+export interface PipelineStage {
+  last_finished_at: string | null;
+  started_at: string | null;
+  status: string | null;
+  result_count: number | null;
+  scope: "market" | "global";
+}
+
+export interface MarketPipeline {
+  listing: PipelineStage | null;
+  detail: PipelineStage | null;
+  processing: PipelineStage | null;
+}
+
 export interface MarketInput {
   code: string; // 메뉴/URL 라우팅 키, unique, ^[a-z0-9][a-z0-9-]*$ (2~16자)
   domain: string;
@@ -40,6 +54,7 @@ export interface Market extends MarketInput {
   id: number;
   created_at: string;
   updated_at: string;
+  pipeline?: MarketPipeline;
 }
 
 export const base = `${API_BASE_URL}/api/admin/markets`;

@@ -7,7 +7,10 @@ import { listPublicMarkets, type PublicMarket } from "../../../lib/markets";
 import {
   formatDateTime,
   formatLocalPrice,
+  getMarketFacets,
   listMarketProducts,
+  type FacetCount,
+  type MarketFacets,
   type MarketProduct,
 } from "../../../lib/products";
 import { formatKrw } from "../../../lib/directPrice";
@@ -15,6 +18,48 @@ import { formatKrw } from "../../../lib/directPrice";
 type Status = "loading" | "error" | "ready";
 
 const PAGE_SIZE = 100;
+
+type ProductFilters = {
+  cask_family: string[];
+  region: string[];
+  distillery_id: number[];
+  bottling: "official" | "independent" | null;
+  spirit_type: string[];
+  peated: boolean | null;
+  age_min: string;
+  age_max: string;
+  abv_min: string;
+  abv_max: string;
+  volume_ml: number[];
+  limited: boolean | null;
+};
+
+const EMPTY_FILTERS: ProductFilters = {
+  cask_family: [],
+  region: [],
+  distillery_id: [],
+  bottling: null,
+  spirit_type: [],
+  peated: null,
+  age_min: "",
+  age_max: "",
+  abv_min: "",
+  abv_max: "",
+  volume_ml: [],
+  limited: null,
+};
+
+function toggleArray<T>(values: T[], value: T): T[] {
+  return values.includes(value)
+    ? values.filter((v) => v !== value)
+    : [...values, value];
+}
+
+function numberOrNull(value: string): number | null {
+  if (value.trim() === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 
 function DirectPriceBlock({ product }: { product: MarketProduct }) {
   if (product.direct_price_krw == null) {
@@ -231,6 +276,330 @@ function ProductCard({
   );
 }
 
+function FacetOption({
+  checked,
+  label,
+  count,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  count: number;
+  onChange: () => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800">
+      <span className="flex min-w-0 items-center gap-2">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          className="h-3.5 w-3.5 shrink-0 accent-blue-600"
+        />
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="shrink-0 tabular-nums text-gray-400">{count}</span>
+    </label>
+  );
+}
+
+function FacetSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border-t border-gray-100 pt-3 first:border-t-0 first:pt-0 dark:border-gray-800">
+      <h2 className="mb-1.5 text-xs font-semibold text-gray-900 dark:text-gray-100">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function countLabel(f: FacetCount): string {
+  return f.korean ? `${f.korean} (${f.value})` : String(f.value);
+}
+
+function ProductFacetSidebar({
+  facets,
+  filters,
+  onFilters,
+  onReset,
+}: {
+  facets: MarketFacets | null;
+  filters: ProductFilters;
+  onFilters: (updater: (prev: ProductFilters) => ProductFilters) => void;
+  onReset: () => void;
+}) {
+  const ready = facets !== null;
+  return (
+    <aside className="w-full rounded-lg border border-gray-200 bg-white/95 p-3 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-950/95 xl:fixed xl:left-4 xl:top-20 xl:z-10 xl:max-h-[calc(100vh-6rem)] xl:w-72 xl:overflow-y-auto">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            필터
+          </h2>
+          <p className="mt-0.5 text-xs text-gray-400">
+            {ready ? `${facets.total}개 기준` : "불러오는 중"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onReset}
+          className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+        >
+          초기화
+        </button>
+      </div>
+
+      {!ready && (
+        <div className="py-8 text-center text-xs text-gray-400">
+          필터를 불러오는 중
+        </div>
+      )}
+
+      {ready && (
+        <div className="space-y-3">
+          {facets.cask_family.length > 0 && (
+            <FacetSection title="캐스크">
+              {facets.cask_family.map((f) => {
+                const value = String(f.value);
+                return (
+                  <FacetOption
+                    key={value}
+                    checked={filters.cask_family.includes(value)}
+                    label={countLabel(f)}
+                    count={f.count}
+                    onChange={() =>
+                      onFilters((prev) => ({
+                        ...prev,
+                        cask_family: toggleArray(prev.cask_family, value),
+                      }))
+                    }
+                  />
+                );
+              })}
+            </FacetSection>
+          )}
+
+          {facets.region.length > 0 && (
+            <FacetSection title="지역">
+              {facets.region.map((f) => {
+                const value = String(f.value);
+                return (
+                  <FacetOption
+                    key={value}
+                    checked={filters.region.includes(value)}
+                    label={countLabel(f)}
+                    count={f.count}
+                    onChange={() =>
+                      onFilters((prev) => ({
+                        ...prev,
+                        region: toggleArray(prev.region, value),
+                      }))
+                    }
+                  />
+                );
+              })}
+            </FacetSection>
+          )}
+
+          {facets.distillery.length > 0 && (
+            <FacetSection title="증류소">
+              {facets.distillery.slice(0, 12).map((f) => (
+                <FacetOption
+                  key={f.id}
+                  checked={filters.distillery_id.includes(f.id)}
+                  label={f.korean ? `${f.korean} (${f.name})` : f.name}
+                  count={f.count}
+                  onChange={() =>
+                    onFilters((prev) => ({
+                      ...prev,
+                      distillery_id: toggleArray(prev.distillery_id, f.id),
+                    }))
+                  }
+                />
+              ))}
+            </FacetSection>
+          )}
+
+          {facets.spirit_type.length > 0 && (
+            <FacetSection title="주종">
+              {facets.spirit_type.map((f) => {
+                const value = String(f.value);
+                return (
+                  <FacetOption
+                    key={value}
+                    checked={filters.spirit_type.includes(value)}
+                    label={countLabel(f)}
+                    count={f.count}
+                    onChange={() =>
+                      onFilters((prev) => ({
+                        ...prev,
+                        spirit_type: toggleArray(prev.spirit_type, value),
+                      }))
+                    }
+                  />
+                );
+              })}
+            </FacetSection>
+          )}
+
+          <FacetSection title="병입 / 피트 / 한정">
+            <div className="grid grid-cols-2 gap-1">
+              {[
+                ["official", "공식", facets.bottling.official],
+                ["independent", "독립", facets.bottling.independent],
+              ].map(([value, label, count]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    onFilters((prev) => ({
+                      ...prev,
+                      bottling:
+                        prev.bottling === value
+                          ? null
+                          : (value as "official" | "independent"),
+                    }))
+                  }
+                  className={`rounded border px-2 py-1 text-xs ${
+                    filters.bottling === value
+                      ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                      : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+                  }`}
+                >
+                  {label} {count}
+                </button>
+              ))}
+              {[
+                [true, "피트", facets.peated.peated],
+                [false, "논피트", facets.peated.unpeated],
+              ].map(([value, label, count]) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  onClick={() =>
+                    onFilters((prev) => ({
+                      ...prev,
+                      peated: prev.peated === value ? null : (value as boolean),
+                    }))
+                  }
+                  className={`rounded border px-2 py-1 text-xs ${
+                    filters.peated === value
+                      ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                      : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+                  }`}
+                >
+                  {label} {count}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  onFilters((prev) => ({
+                    ...prev,
+                    limited: prev.limited === true ? null : true,
+                  }))
+                }
+                className={`col-span-2 rounded border px-2 py-1 text-xs ${
+                  filters.limited === true
+                    ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                    : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+                }`}
+              >
+                한정판 {facets.limited}
+              </button>
+            </div>
+          </FacetSection>
+
+          {facets.volume_ml.length > 0 && (
+            <FacetSection title="용량">
+              <div className="flex flex-wrap gap-1">
+                {facets.volume_ml.map((f) => {
+                  const value = Number(f.value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() =>
+                        onFilters((prev) => ({
+                          ...prev,
+                          volume_ml: toggleArray(prev.volume_ml, value),
+                        }))
+                      }
+                      className={`rounded border px-2 py-1 text-xs ${
+                        filters.volume_ml.includes(value)
+                          ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                          : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+                      }`}
+                    >
+                      {value}ml {f.count}
+                    </button>
+                  );
+                })}
+              </div>
+            </FacetSection>
+          )}
+
+          <FacetSection title="숙성 / 도수">
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                placeholder={`숙성 ${facets.age_years.min ?? ""}`}
+                value={filters.age_min}
+                onChange={(e) =>
+                  onFilters((prev) => ({ ...prev, age_min: e.target.value }))
+                }
+                className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
+              />
+              <input
+                type="number"
+                min={0}
+                max={100}
+                placeholder={`~ ${facets.age_years.max ?? ""}`}
+                value={filters.age_max}
+                onChange={(e) =>
+                  onFilters((prev) => ({ ...prev, age_max: e.target.value }))
+                }
+                className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
+              />
+              <input
+                type="number"
+                min={0}
+                max={100}
+                placeholder={`도수 ${facets.abv.min ?? ""}`}
+                value={filters.abv_min}
+                onChange={(e) =>
+                  onFilters((prev) => ({ ...prev, abv_min: e.target.value }))
+                }
+                className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
+              />
+              <input
+                type="number"
+                min={0}
+                max={100}
+                placeholder={`~ ${facets.abv.max ?? ""}`}
+                value={filters.abv_max}
+                onChange={(e) =>
+                  onFilters((prev) => ({ ...prev, abv_max: e.target.value }))
+                }
+                className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
+              />
+            </div>
+          </FacetSection>
+        </div>
+      )}
+    </aside>
+  );
+}
+
 export default function MarketProductsPage() {
   const params = useParams<{ code: string }>();
   const marketCode = params.code;
@@ -239,8 +608,10 @@ export default function MarketProductsPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [markets, setMarkets] = useState<PublicMarket[]>([]);
   const [products, setProducts] = useState<MarketProduct[]>([]);
+  const [facets, setFacets] = useState<MarketFacets | null>(null);
   const [offset, setOffset] = useState(0);
   const [availableOnly, setAvailableOnly] = useState(true);
+  const [filters, setFilters] = useState<ProductFilters>(EMPTY_FILTERS);
 
   const market = useMemo(
     () => markets.find((m) => m.code === marketCode),
@@ -252,18 +623,36 @@ export default function MarketProductsPage() {
       setStatus("loading");
       Promise.all([
         listPublicMarkets(signal),
+        getMarketFacets(
+          marketCode,
+          { available: availableOnly ? true : null },
+          signal,
+        ),
         listMarketProducts(
           marketCode,
           {
             available: availableOnly ? true : null,
+            cask_family: filters.cask_family,
+            region: filters.region,
+            distillery_id: filters.distillery_id,
+            bottling: filters.bottling,
+            spirit_type: filters.spirit_type,
+            peated: filters.peated,
+            age_min: numberOrNull(filters.age_min),
+            age_max: numberOrNull(filters.age_max),
+            abv_min: numberOrNull(filters.abv_min),
+            abv_max: numberOrNull(filters.abv_max),
+            volume_ml: filters.volume_ml,
+            limited: filters.limited,
             limit: PAGE_SIZE,
             offset,
           },
           signal,
         ),
       ])
-        .then(([marketRows, productRows]) => {
+        .then(([marketRows, facetData, productRows]) => {
           setMarkets(marketRows);
+          setFacets(facetData);
           setProducts(productRows);
           setStatus("ready");
         })
@@ -274,7 +663,7 @@ export default function MarketProductsPage() {
           setStatus("error");
         });
     },
-    [availableOnly, marketCode, offset],
+    [availableOnly, filters, marketCode, offset],
   );
 
   useEffect(() => {
@@ -304,8 +693,38 @@ export default function MarketProductsPage() {
     return withImage / products.length >= 0.5;
   }, [products]);
 
+  const updateFilters = useCallback(
+    (updater: (prev: ProductFilters) => ProductFilters) => {
+      setOffset(0);
+      setFilters(updater);
+    },
+    [],
+  );
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
+      <div className="mb-6 xl:hidden">
+        <ProductFacetSidebar
+          facets={facets}
+          filters={filters}
+          onFilters={updateFilters}
+          onReset={() => {
+            setOffset(0);
+            setFilters(EMPTY_FILTERS);
+          }}
+        />
+      </div>
+      <div className="hidden xl:block">
+        <ProductFacetSidebar
+          facets={facets}
+          filters={filters}
+          onFilters={updateFilters}
+          onReset={() => {
+            setOffset(0);
+            setFilters(EMPTY_FILTERS);
+          }}
+        />
+      </div>
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">마켓</p>
@@ -322,6 +741,7 @@ export default function MarketProductsPage() {
             onChange={(e) => {
               setOffset(0);
               setAvailableOnly(e.target.checked);
+              setFilters(EMPTY_FILTERS);
             }}
             className="h-4 w-4 accent-blue-600"
           />
