@@ -10,6 +10,7 @@ const MENU = [
   { href: "/admin/markets", label: "마켓 관리" },
   { href: "/admin/crawls", label: "데이터 수집 관리" },
   { href: "/admin/reviews", label: "검토" },
+  { href: "/admin/whisky", label: "위스키 도메인" },
 ];
 
 export default function AdminLayout({

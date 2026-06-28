@@ -7,6 +7,7 @@ export type MarketProduct = components["schemas"]["MarketProductOut"];
 export interface MarketProductQuery {
   available?: boolean | null;
   cask_family?: string[];
+  country?: string[];
   region?: string[];
   distillery_id?: number[];
   bottling?: "official" | "independent" | null;
@@ -35,6 +36,18 @@ export interface DistilleryFacet {
   count: number;
 }
 
+export interface DistilleryRegionFacet {
+  region: string | null;
+  count: number;
+  distilleries: DistilleryFacet[];
+}
+
+export interface DistilleryCountryFacet {
+  country: string | null;
+  count: number;
+  regions: DistilleryRegionFacet[];
+}
+
 export interface RangeFacet {
   min: string | number | null;
   max: string | number | null;
@@ -43,13 +56,13 @@ export interface RangeFacet {
 export interface MarketFacets {
   total: number;
   cask_family: FacetCount[];
+  country: FacetCount[];
   region: FacetCount[];
   spirit_type: FacetCount[];
-  distillery: DistilleryFacet[];
+  distillery: DistilleryCountryFacet[];
   bottling: Record<"official" | "independent", number>;
   peated: Record<"peated" | "unpeated" | "unknown", number>;
   volume_ml: FacetCount[];
-  limited: number;
   age_years: RangeFacet;
   abv: RangeFacet;
 }
@@ -74,6 +87,7 @@ export async function listMarketProducts(
     params.set("available", String(query.available));
   }
   appendValues(params, "cask_family", query.cask_family);
+  appendValues(params, "country", query.country);
   appendValues(params, "region", query.region);
   appendValues(params, "distillery_id", query.distillery_id);
   if (query.bottling) params.set("bottling", query.bottling);

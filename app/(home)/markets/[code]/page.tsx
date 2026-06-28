@@ -21,6 +21,7 @@ const PAGE_SIZE = 100;
 
 type ProductFilters = {
   cask_family: string[];
+  country: string[];
   region: string[];
   distillery_id: number[];
   bottling: "official" | "independent" | null;
@@ -31,11 +32,11 @@ type ProductFilters = {
   abv_min: string;
   abv_max: string;
   volume_ml: number[];
-  limited: boolean | null;
 };
 
 const EMPTY_FILTERS: ProductFilters = {
   cask_family: [],
+  country: [],
   region: [],
   distillery_id: [],
   bottling: null,
@@ -46,7 +47,6 @@ const EMPTY_FILTERS: ProductFilters = {
   abv_min: "",
   abv_max: "",
   volume_ml: [],
-  limited: null,
 };
 
 function toggleArray<T>(values: T[], value: T): T[] {
@@ -386,8 +386,25 @@ function ProductFacetSidebar({
             </FacetSection>
           )}
 
-          {facets.region.length > 0 && (
+          {(facets.country.length > 0 || facets.region.length > 0) && (
             <FacetSection title="지역">
+              {facets.country.map((f) => {
+                const value = String(f.value);
+                return (
+                  <FacetOption
+                    key={`country-${value}`}
+                    checked={filters.country.includes(value)}
+                    label={countLabel(f)}
+                    count={f.count}
+                    onChange={() =>
+                      onFilters((prev) => ({
+                        ...prev,
+                        country: toggleArray(prev.country, value),
+                      }))
+                    }
+                  />
+                );
+              })}
               {facets.region.map((f) => {
                 const value = String(f.value);
                 return (
@@ -410,20 +427,24 @@ function ProductFacetSidebar({
 
           {facets.distillery.length > 0 && (
             <FacetSection title="증류소">
-              {facets.distillery.slice(0, 12).map((f) => (
-                <FacetOption
-                  key={f.id}
-                  checked={filters.distillery_id.includes(f.id)}
-                  label={f.korean ? `${f.korean} (${f.name})` : f.name}
-                  count={f.count}
-                  onChange={() =>
-                    onFilters((prev) => ({
-                      ...prev,
-                      distillery_id: toggleArray(prev.distillery_id, f.id),
-                    }))
-                  }
-                />
-              ))}
+              {facets.distillery.flatMap((countryGroup) =>
+                countryGroup.regions.flatMap((regionGroup) =>
+                  regionGroup.distilleries.map((f) => (
+                    <FacetOption
+                      key={f.id}
+                      checked={filters.distillery_id.includes(f.id)}
+                      label={f.korean ? `${f.korean} (${f.name})` : f.name}
+                      count={f.count}
+                      onChange={() =>
+                        onFilters((prev) => ({
+                          ...prev,
+                          distillery_id: toggleArray(prev.distillery_id, f.id),
+                        }))
+                      }
+                    />
+                  )),
+                ),
+              )}
             </FacetSection>
           )}
 
@@ -449,7 +470,7 @@ function ProductFacetSidebar({
             </FacetSection>
           )}
 
-          <FacetSection title="병입 / 피트 / 한정">
+          <FacetSection title="병입 / 피트">
             <div className="grid grid-cols-2 gap-1">
               {[
                 ["official", "공식", facets.bottling.official],
@@ -498,22 +519,6 @@ function ProductFacetSidebar({
                   {label} {count}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() =>
-                  onFilters((prev) => ({
-                    ...prev,
-                    limited: prev.limited === true ? null : true,
-                  }))
-                }
-                className={`col-span-2 rounded border px-2 py-1 text-xs ${
-                  filters.limited === true
-                    ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
-                    : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
-                }`}
-              >
-                한정판 {facets.limited}
-              </button>
             </div>
           </FacetSection>
 
@@ -633,6 +638,7 @@ export default function MarketProductsPage() {
           {
             available: availableOnly ? true : null,
             cask_family: filters.cask_family,
+            country: filters.country,
             region: filters.region,
             distillery_id: filters.distillery_id,
             bottling: filters.bottling,
@@ -643,7 +649,6 @@ export default function MarketProductsPage() {
             abv_min: numberOrNull(filters.abv_min),
             abv_max: numberOrNull(filters.abv_max),
             volume_ml: filters.volume_ml,
-            limited: filters.limited,
             limit: PAGE_SIZE,
             offset,
           },
