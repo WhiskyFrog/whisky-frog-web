@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isAuthed } from "../../../lib/auth";
 import { listPublicMarkets, type PublicMarket } from "../../../lib/markets";
 import {
   formatDateTime,
@@ -213,9 +214,11 @@ function ProductStatusBadge({ available }: { available: boolean }) {
 function ProductCard({
   product: p,
   market,
+  canEdit,
 }: {
   product: MarketProduct;
   market: PublicMarket | undefined;
+  canEdit: boolean;
 }) {
   return (
     <article className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
@@ -270,10 +273,36 @@ function ProductCard({
               구매 링크
             </Link>
           </div>
+          {canEdit && (
+            <Link
+              href={taxonomyEditHref(p, market)}
+              className="mt-2 inline-flex w-full items-center justify-center rounded border border-blue-200 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950/40"
+            >
+              속성 수정
+            </Link>
+          )}
         </div>
       </div>
     </article>
   );
+}
+
+function taxonomyEditHref(
+  product: MarketProduct & { cask_family?: string | null },
+  market: PublicMarket | undefined,
+) {
+  return {
+    pathname: `/admin/products/${product.product_id}/taxonomy`,
+    query: {
+      name: product.product_name,
+      raw: product.raw_name ?? "",
+      market: market?.code ?? "",
+      distillery: product.distillery_korean ?? "",
+      bottler: product.bottler_korean ?? "",
+      cask: product.cask_korean ?? "",
+      cask_family: product.cask_family ?? "",
+    },
+  };
 }
 
 function FacetOption({
@@ -617,6 +646,7 @@ export default function MarketProductsPage() {
   const [offset, setOffset] = useState(0);
   const [availableOnly, setAvailableOnly] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>(EMPTY_FILTERS);
+  const [canEditProducts, setCanEditProducts] = useState(false);
 
   const market = useMemo(
     () => markets.find((m) => m.code === marketCode),
@@ -676,6 +706,10 @@ export default function MarketProductsPage() {
     load(controller.signal);
     return () => controller.abort();
   }, [load]);
+
+  useEffect(() => {
+    setCanEditProducts(isAuthed());
+  }, []);
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
   const hasPrev = offset > 0;
@@ -791,7 +825,12 @@ export default function MarketProductsPage() {
       {status === "ready" && products.length > 0 && imageRich && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {products.map((p) => (
-            <ProductCard key={p.product_url_id} product={p} market={market} />
+            <ProductCard
+              key={p.product_url_id}
+              product={p}
+              market={market}
+              canEdit={canEditProducts}
+            />
           ))}
         </div>
       )}
@@ -855,6 +894,14 @@ export default function MarketProductsPage() {
                     구매 링크
                   </Link>
                 </div>
+                {canEditProducts && (
+                  <Link
+                    href={taxonomyEditHref(p, market)}
+                    className="mt-3 inline-flex w-full items-center justify-center rounded border border-blue-200 px-2 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                  >
+                    속성 수정
+                  </Link>
+                )}
               </article>
             ))}
           </div>
@@ -911,14 +958,24 @@ export default function MarketProductsPage() {
                       {formatDateTime(p.crawled_at)}
                     </td>
                     <td className="px-3 py-3 text-right">
-                      <Link
-                        href={p.source_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-blue-600 hover:underline dark:text-blue-400"
-                      >
-                        바로가기
-                      </Link>
+                      <div className="flex flex-col items-end gap-1">
+                        <Link
+                          href={p.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          바로가기
+                        </Link>
+                        {canEditProducts && (
+                          <Link
+                            href={taxonomyEditHref(p, market)}
+                            className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            속성 수정
+                          </Link>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

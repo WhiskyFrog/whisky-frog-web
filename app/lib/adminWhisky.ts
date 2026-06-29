@@ -58,6 +58,24 @@ export interface BrandMutation {
   products_updated: number;
 }
 
+export interface ProductTaxonomyPatch {
+  distillery_id?: number | null;
+  distillery_name?: string | null;
+  bottler_id?: number | null;
+  bottler_name?: string | null;
+  cask_type_id?: number | null;
+  cask_type_name?: string | null;
+  cask_family?: string | null;
+}
+
+export interface ProductTaxonomyPatchResult {
+  product_id: number;
+  distillery_id: number | null;
+  bottler_id: number | null;
+  cask_type_id: number | null;
+  updated: boolean;
+}
+
 function qs(query: Record<string, string | number | null | undefined>): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
@@ -223,5 +241,21 @@ export async function clearBrand(name: string): Promise<BrandMutation> {
       method: "DELETE",
       headers: authHeaders(),
     }),
+  );
+}
+
+export async function patchProductTaxonomy(
+  productId: number,
+  payload: ProductTaxonomyPatch,
+): Promise<ProductTaxonomyPatchResult> {
+  return json(
+    await fetch(
+      `${API_BASE_URL}/api/admin/processing/products/${productId}/taxonomy`,
+      {
+        method: "PATCH",
+        headers: authHeaders(true),
+        body: JSON.stringify(payload),
+      },
+    ),
   );
 }
