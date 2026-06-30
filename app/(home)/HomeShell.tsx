@@ -6,7 +6,7 @@ import { TopNav } from "../components/TopNav";
 
 export function HomeShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const showExchangeMini = pathname !== "/exchange-rates";
+  const showExchangeMini = pathname !== "/" && pathname !== "/exchange-rates";
 
   return (
     <div className="relative min-h-screen">
