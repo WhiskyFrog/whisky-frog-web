@@ -3,7 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Whisky Frog",
-  description: "해외 쇼핑몰 가격(현지가+배송+관세) + 리뷰 통합 비교",
+  description:
+    "Good whisky, good friends, good time. 취향에 맞는 위스키를 찾고 즐기는 작은 숲속 왕국.",
 };
 
 export default function RootLayout({

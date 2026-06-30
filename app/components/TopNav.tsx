@@ -3,18 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { listPublicMarkets, type PublicMarket } from "../lib/markets";
 import { isAuthed } from "../lib/auth";
+import { listPublicMarkets, type PublicMarket } from "../lib/markets";
 import { LoginModal } from "./LoginModal";
 
-/** 홈 상단 메뉴 바. "마켓" 호버 시 등록된 마켓 드롭다운, 우측 끝 관리자 버튼. */
 export function TopNav() {
   const router = useRouter();
   const [markets, setMarkets] = useState<PublicMarket[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
-  // 관리자 버튼: 이미 로그인돼 있으면 바로 이동, 아니면 로그인 모달.
   function handleAdminClick() {
     if (isAuthed()) router.push("/admin");
     else setShowLogin(true);
@@ -29,46 +27,41 @@ export function TopNav() {
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setLoaded(true); // 실패해도 빈 목록으로 표시
+        setLoaded(true);
       });
     return () => controller.abort();
   }, []);
 
   return (
-    <nav className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 dark:border-gray-800 dark:bg-gray-900">
-      <div className="flex items-center gap-6">
-        <Link
-          href="/"
-          className="text-lg font-bold text-gray-900 dark:text-gray-100"
-        >
+    <nav className="sticky top-0 z-30 flex h-16 items-center justify-between border-b-2 border-[#D8A868] bg-[#FFF8EA]/95 px-5 text-[#302818] backdrop-blur sm:px-8 lg:px-12">
+      <div className="flex items-center gap-5 sm:gap-7">
+        <Link href="/" className="text-lg font-black tracking-wide">
           Whisky Frog
         </Link>
 
-        {/* 마켓 — 클릭 이동 없이, 호버 시 /api/markets 목록 드롭다운만 표시 */}
         <div className="group relative">
-          <span className="cursor-default select-none text-sm text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100">
+          <span className="cursor-default select-none text-sm font-bold text-[#5A421F] group-hover:text-[#302818]">
             마켓
           </span>
-          {/* top-full에 바로 붙여 호버 유지(중간 빈틈 없음) */}
-          <div className="invisible absolute left-0 top-full z-20 min-w-[200px] rounded-md border border-gray-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-gray-700 dark:bg-gray-900">
+          <div className="invisible absolute left-0 top-full z-20 mt-2 min-w-[210px] rounded-md border-2 border-[#D8A868] bg-[#FFF8EA] py-1 opacity-0 shadow-[0_8px_0_rgba(128,88,24,0.14)] transition-opacity duration-100 group-hover:visible group-hover:opacity-100">
             {!loaded ? (
-              <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
-                불러오는 중…
+              <p className="px-3 py-2 text-xs font-semibold text-[#987850]">
+                불러오는 중
               </p>
             ) : markets.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
+              <p className="px-3 py-2 text-xs font-semibold text-[#987850]">
                 등록된 마켓이 없습니다.
               </p>
             ) : (
-              markets.map((m) => (
+              markets.map((market) => (
                 <Link
-                  key={m.id}
-                  href={`/markets/${m.code}`}
-                  className="flex items-center justify-between gap-4 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300"
+                  key={market.id}
+                  href={`/markets/${market.code}`}
+                  className="flex items-center justify-between gap-4 px-3 py-2 text-sm text-[#4B3418] hover:bg-[#F8E7C6]"
                 >
-                  <span className="font-medium">{m.name}</span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
-                    {m.currency}
+                  <span className="font-bold">{market.name}</span>
+                  <span className="text-xs font-semibold text-[#9A6A20]">
+                    {market.currency}
                   </span>
                 </Link>
               ))
@@ -76,18 +69,17 @@ export function TopNav() {
           </div>
         </div>
 
-        {/* 직구가격 — 수동입력 확인용 계산 페이지 */}
         <Link
           href="/direct-price"
-          className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          className="text-sm font-bold text-[#5A421F] hover:text-[#302818]"
         >
-          직구가격
+          직구가 계산
         </Link>
       </div>
 
       <button
         onClick={handleAdminClick}
-        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+        className="rounded-md border-2 border-[#805818] bg-[#F8E7C6] px-3 py-1.5 text-sm font-bold text-[#4B3418] hover:bg-[#FFEFCF]"
       >
         관리자
       </button>

@@ -3,8 +3,106 @@
 @tailwind utilities;
 
 @layer base {
-  /* 전역 캔버스 — 시스템 다크모드(prefers-color-scheme) 자동 추종. */
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+    @apply bg-[#F7EAD4] text-[#302818] antialiased;
+  }
+}
+
+@layer utilities {
+  .wf-hero-glow {
+    animation: wf-glow-shift 12s ease-in-out infinite alternate;
+    background-size: 120% 120%, 100% 100%;
+  }
+
+  .wf-frame-enter {
+    animation: wf-frame-rise 700ms ease-out both;
+  }
+
+  .wf-character-float {
+    animation: wf-gentle-float 5.8s ease-in-out infinite;
+    transform-origin: 50% 82%;
+  }
+
+  .wf-dust {
+    position: absolute;
+    z-index: 1;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: rgba(216, 168, 104, 0.55);
+    box-shadow: 0 0 12px rgba(216, 168, 104, 0.55);
+    animation: wf-dust-drift 7s ease-in-out infinite;
+  }
+
+  .wf-dust-a {
+    left: 16%;
+    top: 28%;
+  }
+
+  .wf-dust-b {
+    right: 18%;
+    top: 24%;
+    animation-delay: 1.4s;
+  }
+
+  .wf-dust-c {
+    right: 31%;
+    bottom: 28%;
+    animation-delay: 2.6s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wf-hero-glow,
+    .wf-frame-enter,
+    .wf-character-float,
+    .wf-dust {
+      animation: none;
+    }
+  }
+}
+
+@keyframes wf-glow-shift {
+  from {
+    background-position: 55% 38%, 0 0;
+  }
+  to {
+    background-position: 76% 28%, 0 0;
+  }
+}
+
+@keyframes wf-frame-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wf-gentle-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-0.35deg);
+  }
+}
+
+@keyframes wf-dust-drift {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translate3d(0, 0, 0) scale(0.8);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translate3d(10px, -18px, 0) scale(1);
   }
 }
