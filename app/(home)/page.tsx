@@ -34,6 +34,24 @@ const characters = [
   },
 ];
 
+const heroCharacters = [
+  {
+    name: "Bramble",
+    src: "/brand/characters/bramble-preview.png?v=2",
+    className: "wf-bramble-motion z-20 w-[38%] min-w-[185px]",
+  },
+  {
+    name: "Cooper",
+    src: "/brand/characters/cooper-preview.png?v=2",
+    className: "wf-cooper-motion z-10 w-[32%] min-w-[160px]",
+  },
+  {
+    name: "Pip",
+    src: "/brand/characters/pip-preview.png?v=2",
+    className: "wf-pip-motion z-30 w-[30%] min-w-[150px]",
+  },
+];
+
 export default function Home() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#F7EAD4] text-[#302818]">
@@ -78,14 +96,20 @@ export default function Home() {
             <div className="wf-dust wf-dust-a" />
             <div className="wf-dust wf-dust-b" />
             <div className="wf-dust wf-dust-c" />
-            <Image
-              src="/brand/character-lineup-preview.png"
-              alt="Bramble, Cooper, and Pip character preview"
-              width={1400}
-              height={980}
-              priority
-              className="wf-character-float relative z-10 h-auto w-full max-w-[860px] drop-shadow-[0_18px_24px_rgba(74,48,20,0.18)]"
-            />
+            <div className="relative z-10 flex w-full max-w-[900px] items-end justify-center -space-x-8 px-2 sm:-space-x-12 sm:px-6">
+              {heroCharacters.map((character) => (
+                <Image
+                  key={character.name}
+                  src={character.src}
+                  alt={`${character.name} character preview`}
+                  width={620}
+                  height={760}
+                  priority
+                  unoptimized
+                  className={`${character.className} h-auto object-contain drop-shadow-[0_18px_24px_rgba(74,48,20,0.18)]`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
