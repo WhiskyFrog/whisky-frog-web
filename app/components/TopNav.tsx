@@ -43,29 +43,32 @@ export function TopNav() {
           <span className="cursor-default select-none text-sm font-bold text-[#5A421F] group-hover:text-[#302818]">
             마켓
           </span>
-          <div className="invisible absolute left-0 top-full z-20 mt-2 min-w-[210px] rounded-md border-2 border-[#D8A868] bg-[#FFF8EA] py-1 opacity-0 shadow-[0_8px_0_rgba(128,88,24,0.14)] transition-opacity duration-100 group-hover:visible group-hover:opacity-100">
-            {!loaded ? (
-              <p className="px-3 py-2 text-xs font-semibold text-[#987850]">
-                불러오는 중
-              </p>
-            ) : markets.length === 0 ? (
-              <p className="px-3 py-2 text-xs font-semibold text-[#987850]">
-                등록된 마켓이 없습니다.
-              </p>
-            ) : (
-              markets.map((market) => (
-                <Link
-                  key={market.id}
-                  href={`/markets/${market.code}`}
-                  className="flex items-center justify-between gap-4 px-3 py-2 text-sm text-[#4B3418] hover:bg-[#F8E7C6]"
-                >
-                  <span className="font-bold">{market.name}</span>
-                  <span className="text-xs font-semibold text-[#9A6A20]">
-                    {market.currency}
-                  </span>
-                </Link>
-              ))
-            )}
+          {/* top-full에 바로 붙이고 pt-2는 투명 브리지 — 트리거~카드 사이 호버 유지(틈 없음) */}
+          <div className="invisible absolute left-0 top-full z-20 pt-2 opacity-0 transition-opacity duration-100 group-hover:visible group-hover:opacity-100">
+            <div className="min-w-[210px] rounded-md border-2 border-[#D8A868] bg-[#FFF8EA] py-1 shadow-[0_8px_0_rgba(128,88,24,0.14)]">
+              {!loaded ? (
+                <p className="px-3 py-2 text-xs font-semibold text-[#987850]">
+                  불러오는 중
+                </p>
+              ) : markets.length === 0 ? (
+                <p className="px-3 py-2 text-xs font-semibold text-[#987850]">
+                  등록된 마켓이 없습니다.
+                </p>
+              ) : (
+                markets.map((market) => (
+                  <Link
+                    key={market.id}
+                    href={`/markets/${market.code}`}
+                    className="flex items-center justify-between gap-4 px-3 py-2 text-sm text-[#4B3418] hover:bg-[#F8E7C6]"
+                  >
+                    <span className="font-bold">{market.name}</span>
+                    <span className="text-xs font-semibold text-[#9A6A20]">
+                      {market.currency}
+                    </span>
+                  </Link>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
