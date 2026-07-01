@@ -39,8 +39,8 @@ export function TopNav() {
           Whisky Frog
         </Link>
 
-        <div className="group relative">
-          <span className="cursor-default select-none text-sm font-bold text-[#5A421F] group-hover:text-[#302818]">
+        <div className="group relative -mx-3">
+          <span className="inline-flex cursor-default select-none items-center px-3 py-3 text-sm font-bold text-[#5A421F] group-hover:text-[#302818]">
             마켓
           </span>
           {/* top-full에 바로 붙이고 pt-2는 투명 브리지 — 트리거~카드 사이 호버 유지(틈 없음) */}
