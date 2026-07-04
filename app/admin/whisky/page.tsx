@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   clearBrand,
   deleteBottler,
@@ -76,6 +77,8 @@ function metric(label: string, value: number) {
 }
 
 export default function AdminWhiskyPage() {
+  const router = useRouter();
+  const [facetProductId, setFacetProductId] = useState("");
   const [tab, setTab] = useState<Tab>("distilleries");
   const [status, setStatus] = useState<Status>("loading");
   const [errorMsg, setErrorMsg] = useState("");
@@ -191,19 +194,41 @@ export default function AdminWhiskyPage() {
         <div>
           <h2 className="text-xl font-bold">위스키 도메인 관리</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            증류소, 병입자, 캐스크, 브랜드 기준 데이터를 관리합니다.
+            증류소, 병입자, 캐스크, 브랜드 기준 데이터를 관리합니다. 상품별
+            분류 팩싯(주종·숙성·빈티지·피트)은 상품 보정 화면에서 수정합니다.
           </p>
         </div>
-        <div className="flex w-full gap-2 lg:w-auto">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={`${title} 검색`}
-            className="min-w-0 flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950 lg:w-72"
-          />
-          <button onClick={() => load()} className={actionBtn.neutral}>
-            조회
-          </button>
+        <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const id = Number(facetProductId.trim());
+              if (Number.isInteger(id) && id > 0) {
+                router.push(`/admin/products/${id}/taxonomy`);
+              }
+            }}
+            className="flex gap-2"
+          >
+            <input
+              value={facetProductId}
+              onChange={(e) => setFacetProductId(e.target.value)}
+              inputMode="numeric"
+              placeholder="상품 ID"
+              className="w-28 rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950"
+            />
+            <button className={actionBtn.edit}>팩싯 보정</button>
+          </form>
+          <div className="flex flex-1 gap-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={`${title} 검색`}
+              className="min-w-0 flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950 lg:w-72"
+            />
+            <button onClick={() => load()} className={actionBtn.neutral}>
+              조회
+            </button>
+          </div>
         </div>
       </header>
 

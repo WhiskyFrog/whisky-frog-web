@@ -53,9 +53,29 @@ export interface paths {
         };
         /**
          * List Market Products
-         * @description 활성 마켓의 매칭 완료 상품 목록을 최신 가격 기준으로 반환한다.
+         * @description 활성 마켓의 매칭 완료 상품 목록을 최신 가격 기준으로, 위스키 사전정보 패싯으로 필터링해 반환한다.
          */
         get: operations["list_market_products_api_markets__market_code__products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/markets/{market_code}/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Market Facets
+         * @description 마켓의 매칭 매물에 대한 위스키 사전정보 패싯 값/카운트를 반환한다(필터 패널 구성용).
+         */
+        get: operations["market_facets_api_markets__market_code__facets_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -396,6 +416,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/processing/products/{product_id}/taxonomy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Product Taxonomy
+         * @description 제품 마스터의 증류소/병입자/대표 캐스크 연결을 수동 교정한다.
+         */
+        patch: operations["patch_product_taxonomy_api_admin_processing_products__product_id__taxonomy_patch"];
+        trace?: never;
+    };
+    "/api/admin/processing/product-urls/{product_url_id}/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Match Product Url To Product
+         * @description 원문 URL 상품을 기존 제품 마스터에 수동 연결하고 human alias를 남긴다.
+         */
+        post: operations["match_product_url_to_product_api_admin_processing_product_urls__product_url_id__match_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/processing/jobs/{task_id}": {
         parameters: {
             query?: never;
@@ -439,6 +499,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/processing/reviews/{product_url_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Review Item
+         * @description 검수 단건 상세("왜 애매?") — 최신 run 전체 근거 + consensus 채택값 드래프트.
+         *
+         *     드래프트(`draft`)는 UI가 resolve 폼을 프리필하는 용도. 대상 URL이 없으면 404.
+         */
+        get: operations["get_review_item_api_admin_processing_reviews__product_url_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/processing/reviews/{product_url_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject Review Item
+         * @description 검수 반려(위스키 아님·중복·쓰레기) — match_status='rejected' + 큐 제거.
+         *
+         *     적재하지 않는다. 재크롤로 다시 떠도 ⑤ 배치가 rejected를 후보에서 제외한다. 없으면 404.
+         */
+        post: operations["reject_review_item_api_admin_processing_reviews__product_url_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/processing/reviews/{product_url_id}/resolve": {
         parameters: {
             query?: never;
@@ -458,6 +562,195 @@ export interface paths {
          */
         post: operations["resolve_review_item_api_admin_processing_reviews__product_url_id__resolve_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/distilleries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Distilleries */
+        get: operations["list_distilleries_api_admin_whisky_distilleries_get"];
+        put?: never;
+        /** Create Distillery */
+        post: operations["create_distillery_api_admin_whisky_distilleries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/distilleries/{distillery_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Distillery */
+        get: operations["get_distillery_api_admin_whisky_distilleries__distillery_id__get"];
+        /** Update Distillery */
+        put: operations["update_distillery_api_admin_whisky_distilleries__distillery_id__put"];
+        post?: never;
+        /** Delete Distillery */
+        delete: operations["delete_distillery_api_admin_whisky_distilleries__distillery_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/products/{product_id}/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Product Facets
+         * @description 관리자용 제품 facet 조회. 누락된 분류값 보정 화면의 현재값 로딩에 쓴다.
+         */
+        get: operations["get_product_facets_api_admin_whisky_products__product_id__facets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Product Facets
+         * @description 관리자용 제품 facet 수정.
+         *
+         *     보낸 필드만 갱신한다. `null`을 명시하면 해당 facet을 비운다.
+         */
+        patch: operations["update_product_facets_api_admin_whisky_products__product_id__facets_patch"];
+        trace?: never;
+    };
+    "/api/admin/whisky/bottlers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Bottlers */
+        get: operations["list_bottlers_api_admin_whisky_bottlers_get"];
+        put?: never;
+        /** Create Bottler */
+        post: operations["create_bottler_api_admin_whisky_bottlers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/bottlers/{bottler_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Bottler */
+        get: operations["get_bottler_api_admin_whisky_bottlers__bottler_id__get"];
+        /** Update Bottler */
+        put: operations["update_bottler_api_admin_whisky_bottlers__bottler_id__put"];
+        post?: never;
+        /** Delete Bottler */
+        delete: operations["delete_bottler_api_admin_whisky_bottlers__bottler_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/cask-families": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cask Families */
+        get: operations["list_cask_families_api_admin_whisky_cask_families_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/cask-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cask Types */
+        get: operations["list_cask_types_api_admin_whisky_cask_types_get"];
+        put?: never;
+        /** Create Cask Type */
+        post: operations["create_cask_type_api_admin_whisky_cask_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/cask-types/{cask_type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Cask Type */
+        get: operations["get_cask_type_api_admin_whisky_cask_types__cask_type_id__get"];
+        /** Update Cask Type */
+        put: operations["update_cask_type_api_admin_whisky_cask_types__cask_type_id__put"];
+        post?: never;
+        /** Delete Cask Type */
+        delete: operations["delete_cask_type_api_admin_whisky_cask_types__cask_type_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Brands */
+        get: operations["list_brands_api_admin_whisky_brands_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/whisky/brands/{brand_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Rename Brand */
+        put: operations["rename_brand_api_admin_whisky_brands__brand_name__put"];
+        post?: never;
+        /** Clear Brand */
+        delete: operations["clear_brand_api_admin_whisky_brands__brand_name__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -535,6 +828,99 @@ export interface components {
             started_at?: string | null;
             /** Eta */
             eta?: string | null;
+        };
+        /** BottlerIn */
+        BottlerIn: {
+            /** Canonical Name */
+            canonical_name: string;
+            /** Korean Name */
+            korean_name?: string | null;
+        };
+        /** BottlerOut */
+        BottlerOut: {
+            /** Canonical Name */
+            canonical_name: string;
+            /** Korean Name */
+            korean_name?: string | null;
+            /** Id */
+            id: number;
+            /**
+             * Product Count
+             * @default 0
+             */
+            product_count: number;
+            /**
+             * Alias Count
+             * @default 0
+             */
+            alias_count: number;
+        };
+        /** BrandMutationOut */
+        BrandMutationOut: {
+            /** Name */
+            name?: string | null;
+            /** Products Updated */
+            products_updated: number;
+        };
+        /** BrandOut */
+        BrandOut: {
+            /** Name */
+            name: string;
+            /** Product Count */
+            product_count: number;
+        };
+        /** BrandRenameIn */
+        BrandRenameIn: {
+            /** Name */
+            name: string;
+        };
+        /** CaskFamilyOut */
+        CaskFamilyOut: {
+            /** Value */
+            value: string;
+            /** Korean */
+            korean?: string | null;
+        };
+        /** CaskTypeIn */
+        CaskTypeIn: {
+            /** Canonical Name */
+            canonical_name: string;
+            /**
+             * Family
+             * @default other
+             */
+            family: string;
+            /** Korean Name */
+            korean_name?: string | null;
+        };
+        /** CaskTypeOut */
+        CaskTypeOut: {
+            /** Canonical Name */
+            canonical_name: string;
+            /**
+             * Family
+             * @default other
+             */
+            family: string;
+            /** Korean Name */
+            korean_name?: string | null;
+            /** Id */
+            id: number;
+            /**
+             * Product Count
+             * @default 0
+             */
+            product_count: number;
+            /**
+             * Product Cask Count
+             * @default 0
+             */
+            product_cask_count: number;
+            /**
+             * Alias Count
+             * @default 0
+             */
+            alias_count: number;
         };
         /**
          * CrawlIn
@@ -646,6 +1032,97 @@ export interface components {
             /** Taxable */
             taxable: boolean;
         };
+        /** DistilleryCountryFacet */
+        DistilleryCountryFacet: {
+            /** Country */
+            country?: string | null;
+            /** Count */
+            count: number;
+            /** Regions */
+            regions: components["schemas"]["DistilleryRegionFacet"][];
+        };
+        /** DistilleryFacet */
+        DistilleryFacet: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Korean */
+            korean?: string | null;
+            /** Count */
+            count: number;
+        };
+        /** DistilleryIn */
+        DistilleryIn: {
+            /** Canonical Name */
+            canonical_name: string;
+            /** Korean Name */
+            korean_name?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Region */
+            region?: string | null;
+            /**
+             * Closed
+             * @default false
+             */
+            closed: boolean;
+            /**
+             * Is Secret
+             * @default false
+             */
+            is_secret: boolean;
+            /** Renamed To Id */
+            renamed_to_id?: number | null;
+            /** Suspected Distillery Id */
+            suspected_distillery_id?: number | null;
+        };
+        /** DistilleryOut */
+        DistilleryOut: {
+            /** Canonical Name */
+            canonical_name: string;
+            /** Korean Name */
+            korean_name?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Region */
+            region?: string | null;
+            /**
+             * Closed
+             * @default false
+             */
+            closed: boolean;
+            /**
+             * Is Secret
+             * @default false
+             */
+            is_secret: boolean;
+            /** Renamed To Id */
+            renamed_to_id?: number | null;
+            /** Suspected Distillery Id */
+            suspected_distillery_id?: number | null;
+            /** Id */
+            id: number;
+            /**
+             * Product Count
+             * @default 0
+             */
+            product_count: number;
+            /**
+             * Alias Count
+             * @default 0
+             */
+            alias_count: number;
+        };
+        /** DistilleryRegionFacet */
+        DistilleryRegionFacet: {
+            /** Region */
+            region?: string | null;
+            /** Count */
+            count: number;
+            /** Distilleries */
+            distilleries: components["schemas"]["DistilleryFacet"][];
+        };
         /**
          * ExchangeRateOut
          * @description 환율 응답 계약 한 행.
@@ -672,6 +1149,18 @@ export interface components {
              */
             apply_end: string;
         };
+        /**
+         * FacetCount
+         * @description 패싯 값 1개 + 해당 매물 수(+한글 표시).
+         */
+        FacetCount: {
+            /** Value */
+            value: string | number;
+            /** Count */
+            count: number;
+            /** Korean */
+            korean?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -692,6 +1181,38 @@ export interface components {
             username: string;
             /** Password */
             password: string;
+        };
+        /**
+         * MarketFacetsOut
+         * @description 마켓의 매칭(기본 판매중) 매물에 대한 패싯별 값/카운트 — 프론트 필터 패널 구성용.
+         *
+         *     ⚠️ 각 패싯 카운트는 **다른 패싯 선택과 무관한 전체 집계**다(교차 좁힘 없음, MVP).
+         */
+        MarketFacetsOut: {
+            /** Total */
+            total: number;
+            /** Cask Family */
+            cask_family: components["schemas"]["FacetCount"][];
+            /** Country */
+            country: components["schemas"]["FacetCount"][];
+            /** Region */
+            region: components["schemas"]["FacetCount"][];
+            /** Spirit Type */
+            spirit_type: components["schemas"]["FacetCount"][];
+            /** Distillery */
+            distillery: components["schemas"]["DistilleryCountryFacet"][];
+            /** Bottling */
+            bottling: {
+                [key: string]: number;
+            };
+            /** Peated */
+            peated: {
+                [key: string]: number;
+            };
+            /** Volume Ml */
+            volume_ml: components["schemas"]["FacetCount"][];
+            age_years: components["schemas"]["RangeFacet"];
+            abv: components["schemas"]["RangeFacet"];
         };
         /**
          * MarketIn
@@ -822,6 +1343,15 @@ export interface components {
             updated_at: string;
         };
         /**
+         * MarketPipelineOut
+         * @description 마켓별 3단계 진행 현황 롤업. 단계별 마지막 실행 + 상태(없으면 null).
+         */
+        MarketPipelineOut: {
+            listing?: components["schemas"]["PipelineStageOut"] | null;
+            detail?: components["schemas"]["PipelineStageOut"] | null;
+            processing?: components["schemas"]["PipelineStageOut"] | null;
+        };
+        /**
          * MarketProductOut
          * @description 마켓별 제품 목록 한 행 — 목록 UI용 최소 공개 필드 + 예상 직구가.
          */
@@ -865,6 +1395,24 @@ export interface components {
             cask_korean?: string | null;
             /** Product Name Korean */
             product_name_korean?: string | null;
+            /** Cask Family */
+            cask_family?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Region */
+            region?: string | null;
+            /** Spirit Type */
+            spirit_type?: string | null;
+            /** Peated */
+            peated?: boolean | null;
+            /** Age Years */
+            age_years?: number | null;
+            /** Abv */
+            abv?: string | null;
+            /** Volume Ml */
+            volume_ml?: number | null;
+            /** Outturn */
+            outturn?: number | null;
         };
         /**
          * MarketPublicOut
@@ -887,12 +1435,88 @@ export interface components {
             base_url: string | null;
         };
         /**
+         * MarketWithPipelineOut
+         * @description 마켓 목록 전용 — CRUD 응답(MarketOut)에 파이프라인 롤업을 얹는다.
+         */
+        MarketWithPipelineOut: {
+            /** Id */
+            id: number;
+            /** Code */
+            code: string;
+            /** Domain */
+            domain: string;
+            /** Name */
+            name: string;
+            /** Currency */
+            currency: string;
+            /** Country */
+            country: string | null;
+            /** Language */
+            language: string | null;
+            /** Base Url */
+            base_url: string | null;
+            /** Active */
+            active: boolean;
+            /** Provides Direct Purchase */
+            provides_direct_purchase: boolean;
+            /** Vat Rate */
+            vat_rate: string;
+            /** Price Includes Vat */
+            price_includes_vat: boolean;
+            /** Local Alcohol Tax Per Liter */
+            local_alcohol_tax_per_liter: string;
+            /** Price Includes Local Alcohol Tax */
+            price_includes_local_alcohol_tax: boolean;
+            /** Incoterm */
+            incoterm: string;
+            /** Fta */
+            fta: boolean;
+            /** Domestic Shipping Cost */
+            domestic_shipping_cost: string;
+            /** Crawl Ship To */
+            crawl_ship_to: string;
+            /** Notes */
+            notes: string | null;
+            /** Shipping Options */
+            shipping_options: components["schemas"]["ShippingOptionOut"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            pipeline: components["schemas"]["MarketPipelineOut"];
+        };
+        /**
          * ParseIn
          * @description 상세 파싱(stage-2) 트리거 옵션. `limit`로 이번 런에 처리할 상품 수를 제한.
          */
         ParseIn: {
             /** Limit */
             limit?: number | null;
+        };
+        /**
+         * PipelineStageOut
+         * @description 한 단계(목록/상세/가공)의 마지막 잡 1건. crawl_jobs에서 파생(읽기전용).
+         */
+        PipelineStageOut: {
+            /** Last Finished At */
+            last_finished_at: string | null;
+            /** Started At */
+            started_at: string | null;
+            /** Status */
+            status: string | null;
+            /** Result Count */
+            result_count: number | null;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "market" | "global";
         };
         /**
          * ProcessingRunIn
@@ -952,6 +1576,128 @@ export interface components {
              */
             finish_months?: number | null;
         };
+        /** ProductFacetsOut */
+        ProductFacetsOut: {
+            /** Id */
+            id: number;
+            /** Canonical Name */
+            canonical_name: string;
+            /** Distillery Id */
+            distillery_id?: number | null;
+            /** Distillery Name */
+            distillery_name?: string | null;
+            /** Distillery Korean */
+            distillery_korean?: string | null;
+            /** Bottler Id */
+            bottler_id?: number | null;
+            /** Bottler Name */
+            bottler_name?: string | null;
+            /** Bottler Korean */
+            bottler_korean?: string | null;
+            /** Cask Type Id */
+            cask_type_id?: number | null;
+            /** Cask Type Name */
+            cask_type_name?: string | null;
+            /** Cask Type Family */
+            cask_type_family?: string | null;
+            /** Cask Type Korean */
+            cask_type_korean?: string | null;
+            /** Brand */
+            brand?: string | null;
+            /** Spirit Type */
+            spirit_type: string;
+            /** Age Years */
+            age_years?: number | null;
+            /** Vintage Year */
+            vintage_year?: number | null;
+            /** Peated */
+            peated?: boolean | null;
+        };
+        /** ProductFacetsPatch */
+        ProductFacetsPatch: {
+            /** Distillery Id */
+            distillery_id?: number | null;
+            /** Bottler Id */
+            bottler_id?: number | null;
+            /** Cask Type Id */
+            cask_type_id?: number | null;
+            /** Brand */
+            brand?: string | null;
+            /** Spirit Type */
+            spirit_type?: string | null;
+            /** Age Years */
+            age_years?: number | null;
+            /** Vintage Year */
+            vintage_year?: number | null;
+            /** Peated */
+            peated?: boolean | null;
+        };
+        /**
+         * ProductTaxonomyPatchIn
+         * @description 제품 마스터의 증류소/병입자/대표 캐스크 FK를 수동 교정한다.
+         *
+         *     각 축은 `*_id`로 기존 위키 엔티티를 지정하거나, `*_name`으로 upsert해서 연결한다.
+         *     둘을 동시에 보내면 422.
+         */
+        ProductTaxonomyPatchIn: {
+            /** Distillery Id */
+            distillery_id?: number | null;
+            /** Distillery Name */
+            distillery_name?: string | null;
+            /** Bottler Id */
+            bottler_id?: number | null;
+            /** Bottler Name */
+            bottler_name?: string | null;
+            /** Cask Type Id */
+            cask_type_id?: number | null;
+            /** Cask Type Name */
+            cask_type_name?: string | null;
+            /** Cask Family */
+            cask_family?: string | null;
+        };
+        /** ProductTaxonomyPatchOut */
+        ProductTaxonomyPatchOut: {
+            /** Product Id */
+            product_id: number;
+            /** Distillery Id */
+            distillery_id?: number | null;
+            /** Bottler Id */
+            bottler_id?: number | null;
+            /** Cask Type Id */
+            cask_type_id?: number | null;
+            /**
+             * Updated
+             * @default false
+             */
+            updated: boolean;
+        };
+        /**
+         * ProductUrlMatchIn
+         * @description 원문 URL 상품을 기존 제품 마스터에 수동 연결한다.
+         */
+        ProductUrlMatchIn: {
+            /** Product Id */
+            product_id: number;
+            /**
+             * Match Confidence
+             * @default 1.0
+             */
+            match_confidence: number | string;
+        };
+        /** ProductUrlMatchOut */
+        ProductUrlMatchOut: {
+            /** Product Url Id */
+            product_url_id: number;
+            /** Product Id */
+            product_id: number;
+            /** Alias Id */
+            alias_id?: number | null;
+            /**
+             * Matched
+             * @default false
+             */
+            matched: boolean;
+        };
         /**
          * ProductUrlOut
          * @description 크롤러 ①이 모은 상품 URL 1건(발견 원장 + ②단계 파싱 커서).
@@ -998,6 +1744,60 @@ export interface components {
             length?: number | null;
         };
         /**
+         * RangeFacet
+         * @description 범위 슬라이더용 최소/최대(매물 없으면 둘 다 null).
+         */
+        RangeFacet: {
+            /** Min */
+            min?: string | null;
+            /** Max */
+            max?: string | null;
+        };
+        /**
+         * ReviewDetailOut
+         * @description 검수 단건 상세 — 목록 근거 + consensus 채택값 드래프트(resolve 폼 프리필).
+         */
+        ReviewDetailOut: {
+            /** Product Url Id */
+            product_url_id: number;
+            /** Name */
+            name?: string | null;
+            /** Url */
+            url?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Market Id */
+            market_id: number;
+            /** Market Code */
+            market_code?: string | null;
+            /** Market Domain */
+            market_domain?: string | null;
+            /** Priority */
+            priority?: number | null;
+            /** Norm Abv */
+            norm_abv?: string | null;
+            /** Norm Volume Ml */
+            norm_volume_ml?: number | null;
+            /** Run Id */
+            run_id?: number | null;
+            /** Method */
+            method?: string | null;
+            /** Agreement */
+            agreement?: number | null;
+            /** Consensus */
+            consensus?: Record<string, never> | null;
+            /** Model Outputs */
+            model_outputs?: unknown[] | null;
+            /** Needs Review */
+            needs_review?: boolean | null;
+            /** Run Created At */
+            run_created_at?: string | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            /** Draft */
+            draft?: Record<string, never>;
+        };
+        /**
          * ReviewListItem
          * @description 검수 대기 1건 — 식별/우선순위 + '왜 애매한지' 근거(classification_runs).
          */
@@ -1038,12 +1838,34 @@ export interface components {
             run_created_at?: string | null;
         };
         /**
+         * ReviewRejectOut
+         * @description 검수 반려 결과 — 반려된 URL/검수완료 처리 건수.
+         */
+        ReviewRejectOut: {
+            /** Product Url Id */
+            product_url_id: number;
+            /**
+             * Urls Rejected
+             * @default 0
+             */
+            urls_rejected: number;
+            /**
+             * Runs Reviewed
+             * @default 0
+             */
+            runs_reviewed: number;
+        };
+        /**
          * ReviewResolveIn
          * @description 운영자가 확정한 위스키 속성(LLM 분류와 동형). confidence는 서버가 1.0으로 고정.
          */
         ReviewResolveIn: {
             /** Distillery */
             distillery?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Region */
+            region?: string | null;
             /** Bottler */
             bottler?: string | null;
             /** Brand */
@@ -1054,6 +1876,10 @@ export interface components {
             age_years?: number | null;
             /** Edition */
             edition?: string | null;
+            /** Outturn */
+            outturn?: number | null;
+            /** Cask Number */
+            cask_number?: string | null;
             /**
              * Spirit Type
              * @default whisky
@@ -1286,6 +2112,32 @@ export interface operations {
             query?: {
                 /** @description 최신 가격 이력의 판매가능 여부. 생략 기본값은 true. */
                 available?: boolean | null;
+                /** @description 캐스크 상위분류(sherry/bourbon/wine…). 여러 값=OR. */
+                cask_family?: string[] | null;
+                /** @description distillery production country. Multiple values=OR. */
+                country?: string[] | null;
+                /** @description 증류소 지역(Islay…). 여러 값=OR. */
+                region?: string[] | null;
+                /** @description 증류소 id. 여러 값=OR. */
+                distillery_id?: number[] | null;
+                /** @description official=공식병입(bottler 없음) / independent=독립병입. */
+                bottling?: string | null;
+                /** @description 주종. 여러 값=OR. */
+                spirit_type?: string[] | null;
+                /** @description 피트 여부. */
+                peated?: boolean | null;
+                /** @description 최소 숙성연수. */
+                age_min?: number | null;
+                /** @description 최대 숙성연수. */
+                age_max?: number | null;
+                /** @description 최소 도수(%). */
+                abv_min?: number | string | null;
+                /** @description 최대 도수(%). */
+                abv_max?: number | string | null;
+                /** @description 용량(ml) 정확일치. 여러 값=OR. */
+                volume_ml?: number[] | null;
+                /** @description true=한정판(outturn 있음)만 / false=일반만. */
+                limited?: boolean | null;
                 limit?: number;
                 offset?: number;
             };
@@ -1304,6 +2156,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketProductOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    market_facets_api_markets__market_code__facets_get: {
+        parameters: {
+            query?: {
+                /** @description 판매가능 매물만 집계(목록 기본과 동일). 생략 기본 true. */
+                available?: boolean | null;
+            };
+            header?: never;
+            path: {
+                market_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketFacetsOut"];
                 };
             };
             /** @description Validation Error */
@@ -1398,7 +2284,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MarketOut"][];
+                    "application/json": components["schemas"]["MarketWithPipelineOut"][];
                 };
             };
         };
@@ -1863,6 +2749,76 @@ export interface operations {
             };
         };
     };
+    patch_product_taxonomy_api_admin_processing_products__product_id__taxonomy_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductTaxonomyPatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductTaxonomyPatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_product_url_to_product_api_admin_processing_product_urls__product_url_id__match_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_url_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductUrlMatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductUrlMatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_job_status_api_admin_processing_jobs__task_id__get: {
         parameters: {
             query?: never;
@@ -1925,6 +2881,68 @@ export interface operations {
             };
         };
     };
+    get_review_item_api_admin_processing_reviews__product_url_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_url_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_review_item_api_admin_processing_reviews__product_url_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_url_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewRejectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     resolve_review_item_api_admin_processing_reviews__product_url_id__resolve_post: {
         parameters: {
             query?: never;
@@ -1947,6 +2965,677 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewResolveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_distilleries_api_admin_whisky_distilleries_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                country?: string | null;
+                region?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistilleryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_distillery_api_admin_whisky_distilleries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DistilleryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistilleryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_distillery_api_admin_whisky_distilleries__distillery_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                distillery_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistilleryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_distillery_api_admin_whisky_distilleries__distillery_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                distillery_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DistilleryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistilleryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_distillery_api_admin_whisky_distilleries__distillery_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                distillery_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_product_facets_api_admin_whisky_products__product_id__facets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductFacetsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_product_facets_api_admin_whisky_products__product_id__facets_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductFacetsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductFacetsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bottlers_api_admin_whisky_bottlers_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BottlerOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_bottler_api_admin_whisky_bottlers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BottlerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BottlerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bottler_api_admin_whisky_bottlers__bottler_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bottler_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BottlerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_bottler_api_admin_whisky_bottlers__bottler_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bottler_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BottlerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BottlerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_bottler_api_admin_whisky_bottlers__bottler_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bottler_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cask_families_api_admin_whisky_cask_families_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaskFamilyOut"][];
+                };
+            };
+        };
+    };
+    list_cask_types_api_admin_whisky_cask_types_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                family?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaskTypeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_cask_type_api_admin_whisky_cask_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaskTypeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaskTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_cask_type_api_admin_whisky_cask_types__cask_type_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cask_type_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaskTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_cask_type_api_admin_whisky_cask_types__cask_type_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cask_type_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaskTypeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaskTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_cask_type_api_admin_whisky_cask_types__cask_type_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cask_type_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_brands_api_admin_whisky_brands_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_brand_api_admin_whisky_brands__brand_name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandRenameIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandMutationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_brand_api_admin_whisky_brands__brand_name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandMutationOut"];
                 };
             };
             /** @description Validation Error */

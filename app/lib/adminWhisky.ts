@@ -58,6 +58,51 @@ export interface BrandMutation {
   products_updated: number;
 }
 
+/** 주종 9종 — 백엔드 ck_products_spirit_type과 동일한 목록. hs_code는 서버가 파생. */
+export const SPIRIT_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "whisky", label: "위스키" },
+  { value: "rum", label: "럼" },
+  { value: "gin", label: "진" },
+  { value: "vodka", label: "보드카" },
+  { value: "brandy", label: "브랜디" },
+  { value: "liqueur", label: "리큐르" },
+  { value: "wine", label: "와인" },
+  { value: "sake", label: "사케" },
+  { value: "other", label: "기타/미상" },
+];
+
+export interface ProductFacets {
+  id: number;
+  canonical_name: string;
+  distillery_id: number | null;
+  distillery_name: string | null;
+  distillery_korean: string | null;
+  bottler_id: number | null;
+  bottler_name: string | null;
+  bottler_korean: string | null;
+  cask_type_id: number | null;
+  cask_type_name: string | null;
+  cask_type_family: string | null;
+  cask_type_korean: string | null;
+  brand: string | null;
+  spirit_type: string;
+  age_years: number | null;
+  vintage_year: number | null;
+  peated: boolean | null;
+}
+
+/** 보낸 필드만 갱신, null 명시 = 해당 팩싯 비우기. */
+export interface ProductFacetsPatchBody {
+  distillery_id?: number | null;
+  bottler_id?: number | null;
+  cask_type_id?: number | null;
+  brand?: string | null;
+  spirit_type?: string | null;
+  age_years?: number | null;
+  vintage_year?: number | null;
+  peated?: boolean | null;
+}
+
 export interface ProductTaxonomyPatch {
   distillery_id?: number | null;
   distillery_name?: string | null;
@@ -240,6 +285,32 @@ export async function clearBrand(name: string): Promise<BrandMutation> {
     await fetch(`${base}/brands/${encodeURIComponent(name)}`, {
       method: "DELETE",
       headers: authHeaders(),
+    }),
+  );
+}
+
+export async function getProductFacets(
+  productId: number,
+  signal?: AbortSignal,
+): Promise<ProductFacets> {
+  return json(
+    await fetch(`${base}/products/${productId}/facets`, {
+      signal,
+      cache: "no-store",
+      headers: authHeaders(),
+    }),
+  );
+}
+
+export async function patchProductFacets(
+  productId: number,
+  payload: ProductFacetsPatchBody,
+): Promise<ProductFacets> {
+  return json(
+    await fetch(`${base}/products/${productId}/facets`, {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(payload),
     }),
   );
 }
