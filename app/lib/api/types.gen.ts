@@ -84,6 +84,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Catalog Products
+         * @description 전 활성 마켓의 매칭 상품을 상품 단위로 묶어 마켓별 오퍼와 함께 반환한다.
+         */
+        get: operations["list_catalog_products_api_products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catalog Facets
+         * @description 전 활성 마켓 통합 패싯 — 상품(distinct) 단위 카운트 + 마켓 축.
+         */
+        get: operations["catalog_facets_api_products_facets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/direct-price/estimate": {
         parameters: {
             query?: never;
@@ -1272,6 +1312,86 @@ export interface components {
              */
             alias_count: number;
         };
+        /**
+         * CatalogFacetsOut
+         * @description 전 마켓 통합 패싯 — 카운트는 **상품(distinct product) 단위** + `market` 축 포함.
+         *
+         *     per-market 패싯과 달리 같은 상품이 여러 마켓에 팔려도 1로 센다.
+         *     `market`은 상품이 팔리는 마켓 축(value=마켓 code, korean=마켓 표시명)이다.
+         */
+        CatalogFacetsOut: {
+            /** Total */
+            total: number;
+            /** Cask Family */
+            cask_family: components["schemas"]["FacetCount"][];
+            /** Country */
+            country: components["schemas"]["FacetCount"][];
+            /** Region */
+            region: components["schemas"]["FacetCount"][];
+            /** Spirit Type */
+            spirit_type: components["schemas"]["FacetCount"][];
+            /** Distillery */
+            distillery: components["schemas"]["DistilleryCountryFacet"][];
+            /** Bottling */
+            bottling: {
+                [key: string]: number;
+            };
+            /** Peated */
+            peated: {
+                [key: string]: number;
+            };
+            /** Volume Ml */
+            volume_ml: components["schemas"]["FacetCount"][];
+            age_years: components["schemas"]["RangeFacet"];
+            abv: components["schemas"]["RangeFacet"];
+            /** Market */
+            market: components["schemas"]["FacetCount"][];
+        };
+        /**
+         * CatalogProductOut
+         * @description 통합 카탈로그 한 행 = 상품 1개 + 전 마켓 오퍼 배열.
+         *
+         *     `market` 필터는 **상품 선정에만** 걸린다(선정된 상품의 오퍼는 전 마켓을 다 보여줘
+         *     비교가 가능하게). 오퍼는 직구가(없으면 원화환산가) 오름차순.
+         */
+        CatalogProductOut: {
+            /** Product Id */
+            product_id: number;
+            /** Product Name */
+            product_name: string;
+            /** Product Name Korean */
+            product_name_korean?: string | null;
+            /** Distillery Korean */
+            distillery_korean?: string | null;
+            /** Bottler Korean */
+            bottler_korean?: string | null;
+            /** Cask Korean */
+            cask_korean?: string | null;
+            /** Cask Family */
+            cask_family?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Region */
+            region?: string | null;
+            /** Spirit Type */
+            spirit_type?: string | null;
+            /** Peated */
+            peated?: boolean | null;
+            /** Age Years */
+            age_years?: number | null;
+            /** Abv */
+            abv?: string | null;
+            /** Volume Ml */
+            volume_ml?: number | null;
+            /** Outturn */
+            outturn?: number | null;
+            /** Min Direct Price Krw */
+            min_direct_price_krw?: number | null;
+            /** Min Local Price Krw */
+            min_local_price_krw?: number | null;
+            /** Offers */
+            offers: components["schemas"]["ProductOfferOut"][];
+        };
         /** ClassifierNoteIn */
         ClassifierNoteIn: {
             /** Topic */
@@ -2151,6 +2271,43 @@ export interface components {
             peated?: boolean | null;
         };
         /**
+         * ProductOfferOut
+         * @description 상품 1개의 마켓별 매물(오퍼) — 마켓 간 가격 비교용.
+         */
+        ProductOfferOut: {
+            /** Market Code */
+            market_code: string;
+            /** Market Name */
+            market_name: string;
+            /** Product Url Id */
+            product_url_id: number;
+            /** Raw Name */
+            raw_name?: string | null;
+            /** Local Price */
+            local_price: string;
+            /** Currency */
+            currency: string;
+            /** Available */
+            available: boolean;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Crawled At
+             * Format: date-time
+             */
+            crawled_at: string;
+            /** Image Url */
+            image_url?: string | null;
+            /** Local Price Krw */
+            local_price_krw?: number | null;
+            /** Direct Price Krw */
+            direct_price_krw?: number | null;
+            /** Shipping Krw */
+            shipping_krw?: number | null;
+            /** Exchange Rate */
+            exchange_rate?: string | null;
+        };
+        /**
          * ProductTaxonomyPatchIn
          * @description 제품 마스터의 증류소/병입자/대표 캐스크 FK를 수동 교정한다.
          *
@@ -2718,6 +2875,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketFacetsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_catalog_products_api_products_get: {
+        parameters: {
+            query?: {
+                /** @description 최신 가격 이력의 판매가능 여부. 생략 기본값은 true. */
+                available?: boolean | null;
+                /** @description 마켓 code 필터. 여러 값=OR. **상품 선정에만** 적용(오퍼는 전 마켓 노출). */
+                market?: string[] | null;
+                /** @description 상품 정본명 또는 마켓 원문 제목 ILIKE 부분일치. */
+                search?: string | null;
+                /** @description 캐스크 상위분류. 여러 값=OR. */
+                cask_family?: string[] | null;
+                /** @description 생산 국가. 여러 값=OR. */
+                country?: string[] | null;
+                /** @description 증류소 지역. 여러 값=OR. */
+                region?: string[] | null;
+                /** @description 증류소 id. 여러 값=OR. */
+                distillery_id?: number[] | null;
+                /** @description official=공식병입 / independent=독립병입. */
+                bottling?: string | null;
+                /** @description 주종. 여러 값=OR. */
+                spirit_type?: string[] | null;
+                /** @description 피트 여부. */
+                peated?: boolean | null;
+                age_min?: number | null;
+                age_max?: number | null;
+                abv_min?: number | string | null;
+                abv_max?: number | string | null;
+                /** @description 용량(ml) 정확일치. 여러 값=OR. */
+                volume_ml?: number[] | null;
+                /** @description true=한정판만 / false=일반만. */
+                limited?: boolean | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    catalog_facets_api_products_facets_get: {
+        parameters: {
+            query?: {
+                /** @description 판매가능 매물만 집계(목록 기본과 동일). 생략 기본 true. */
+                available?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogFacetsOut"];
                 };
             };
             /** @description Validation Error */

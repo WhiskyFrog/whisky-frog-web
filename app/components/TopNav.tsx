@@ -73,6 +73,13 @@ export function TopNav() {
         </div>
 
         <Link
+          href="/products"
+          className="text-sm font-bold text-[#5A421F] hover:text-[#302818]"
+        >
+          가격 비교
+        </Link>
+
+        <Link
           href="/direct-price"
           className="text-sm font-bold text-[#5A421F] hover:text-[#302818]"
         >
