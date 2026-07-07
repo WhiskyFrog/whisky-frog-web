@@ -168,6 +168,13 @@ function OfferRow({
   );
 }
 
+/** 공식 병입은 기본값이라 이름에 노출하지 않는다 — 독립병입자명만 그대로 둔다. */
+function displayKoreanName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const stripped = name.replace(/^공식 병입\s*/, "").trim();
+  return stripped || name;
+}
+
 function CatalogCard({
   product: p,
   selectedMarkets,
@@ -176,6 +183,7 @@ function CatalogCard({
   selectedMarkets: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const koreanName = displayKoreanName(p.product_name_korean);
   const thumb = p.offers.find((o) => o.image_url)?.image_url;
   const representative = p.min_direct_price_krw ?? p.min_local_price_krw;
   const visibleOffers = expanded ? p.offers : p.offers.slice(0, 4);
@@ -192,9 +200,9 @@ function CatalogCard({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="font-semibold leading-5 text-gray-900 dark:text-gray-100">
-                {p.product_name_korean ?? p.product_name}
+                {koreanName ?? p.product_name}
               </h2>
-              {p.product_name_korean && (
+              {koreanName && (
                 <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
                   {p.product_name}
                 </p>
