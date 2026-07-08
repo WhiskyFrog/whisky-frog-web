@@ -344,25 +344,6 @@ export default function CatalogPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6 xl:hidden">
-        <ProductFacetSidebar
-          facets={facets}
-          filters={filters}
-          onFilters={updateFilters}
-          onReset={resetFilters}
-          marketOptions={facets?.market}
-        />
-      </div>
-      <div className="hidden xl:block">
-        <ProductFacetSidebar
-          facets={facets}
-          filters={filters}
-          onFilters={updateFilters}
-          onReset={resetFilters}
-          marketOptions={facets?.market}
-        />
-      </div>
-
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -392,7 +373,14 @@ export default function CatalogPage() {
         </label>
       </header>
 
-      <div className="mb-5">
+      <div className="mb-5 flex items-center gap-2">
+        <ProductFacetSidebar
+          facets={facets}
+          filters={filters}
+          onFilters={updateFilters}
+          onReset={resetFilters}
+          marketOptions={facets?.market}
+        />
         <input
           type="search"
           value={searchInput}

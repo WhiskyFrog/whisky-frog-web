@@ -378,28 +378,6 @@ export default function MarketProductsPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6 xl:hidden">
-        <ProductFacetSidebar
-          facets={facets}
-          filters={filters}
-          onFilters={updateFilters}
-          onReset={() => {
-            setOffset(0);
-            setFilters(EMPTY_FILTERS);
-          }}
-        />
-      </div>
-      <div className="hidden xl:block">
-        <ProductFacetSidebar
-          facets={facets}
-          filters={filters}
-          onFilters={updateFilters}
-          onReset={() => {
-            setOffset(0);
-            setFilters(EMPTY_FILTERS);
-          }}
-        />
-      </div>
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">마켓</p>
@@ -409,19 +387,30 @@ export default function MarketProductsPage() {
           </p>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <input
-            type="checkbox"
-            checked={availableOnly}
-            onChange={(e) => {
+        <div className="flex shrink-0 items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <input
+              type="checkbox"
+              checked={availableOnly}
+              onChange={(e) => {
+                setOffset(0);
+                setAvailableOnly(e.target.checked);
+                setFilters(EMPTY_FILTERS);
+              }}
+              className="h-4 w-4 accent-blue-600"
+            />
+            판매 가능 상품만
+          </label>
+          <ProductFacetSidebar
+            facets={facets}
+            filters={filters}
+            onFilters={updateFilters}
+            onReset={() => {
               setOffset(0);
-              setAvailableOnly(e.target.checked);
               setFilters(EMPTY_FILTERS);
             }}
-            className="h-4 w-4 accent-blue-600"
           />
-          판매 가능 상품만
-        </label>
+        </div>
       </header>
 
       {status === "loading" && (
