@@ -263,6 +263,7 @@ export default function MarketProductsPage() {
   const [availableOnly, setAvailableOnly] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>(EMPTY_FILTERS);
   const [canEditProducts, setCanEditProducts] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
 
   const market = useMemo(
     () => markets.find((m) => m.code === marketCode),
@@ -359,6 +360,19 @@ export default function MarketProductsPage() {
     [],
   );
 
+  // 상품 검색 — 백엔드 마켓 엔드포인트에 search 파라미터가 없어 로드된 페이지에서
+  // 클라이언트 필터링한다(마켓당 상품 수가 페이지 크기 수준이라 사실상 전체 검색).
+  // 정본 영문명·마켓 원문 제목·한국어명 모두 부분일치.
+  const searched = useMemo(() => {
+    const q = searchInput.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) =>
+      [p.product_name, p.raw_name, p.product_name_korean].some(
+        (s) => s && s.toLowerCase().includes(q),
+      ),
+    );
+  }, [products, searchInput]);
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -370,31 +384,39 @@ export default function MarketProductsPage() {
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <input
-              type="checkbox"
-              checked={availableOnly}
-              onChange={(e) => {
-                setOffset(0);
-                setAvailableOnly(e.target.checked);
-                setFilters(EMPTY_FILTERS);
-              }}
-              className="h-4 w-4 accent-blue-600"
-            />
-            판매 가능 상품만
-          </label>
-          <ProductFacetSidebar
-            facets={facets}
-            filters={filters}
-            onFilters={updateFilters}
-            onReset={() => {
+        <label className="flex shrink-0 items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <input
+            type="checkbox"
+            checked={availableOnly}
+            onChange={(e) => {
               setOffset(0);
+              setAvailableOnly(e.target.checked);
               setFilters(EMPTY_FILTERS);
             }}
+            className="h-4 w-4 accent-blue-600"
           />
-        </div>
+          판매 가능 상품만
+        </label>
       </header>
+
+      <div className="mb-5 flex items-center gap-2">
+        <ProductFacetSidebar
+          facets={facets}
+          filters={filters}
+          onFilters={updateFilters}
+          onReset={() => {
+            setOffset(0);
+            setFilters(EMPTY_FILTERS);
+          }}
+        />
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="상품명 검색 (한국어·영문·원문)"
+          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-700 dark:bg-gray-950 sm:max-w-md"
+        />
+      </div>
 
       {status === "loading" && (
         <div className="py-20 text-center text-gray-500 dark:text-gray-400">
@@ -419,20 +441,21 @@ export default function MarketProductsPage() {
         </div>
       )}
 
-      {status === "ready" && products.length === 0 && (
+      {status === "ready" && searched.length === 0 && (
         <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-16 text-center dark:border-gray-800 dark:bg-gray-900">
           <p className="font-medium text-gray-700 dark:text-gray-300">
             표시할 상품이 없습니다.
           </p>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            아직 매칭된 상품 가격이 없거나 필터 조건에 맞는 상품이 없습니다.
+            아직 매칭된 상품 가격이 없거나 검색·필터 조건에 맞는 상품이
+            없습니다.
           </p>
         </div>
       )}
 
-      {status === "ready" && products.length > 0 && imageRich && (
+      {status === "ready" && searched.length > 0 && imageRich && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((p) => (
+          {searched.map((p) => (
             <ProductCard
               key={p.product_url_id}
               product={p}
@@ -444,10 +467,10 @@ export default function MarketProductsPage() {
         </div>
       )}
 
-      {status === "ready" && products.length > 0 && !imageRich && (
+      {status === "ready" && searched.length > 0 && !imageRich && (
         <>
           <div className="space-y-3 sm:hidden">
-            {products.map((p) => {
+            {searched.map((p) => {
               const { title: productTitle, subtitle } = productNameParts(p);
               return (
               <article
@@ -537,7 +560,7 @@ export default function MarketProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => {
+                {searched.map((p) => {
                   const { title: productTitle, subtitle } =
                     productNameParts(p);
                   return (
@@ -613,7 +636,7 @@ export default function MarketProductsPage() {
         <>
           <div className="mt-4 flex items-center justify-between text-sm">
             <span className="text-gray-500 dark:text-gray-400">
-              {page}페이지 · {products.length}건 표시
+              {page}페이지 · {searched.length}건 표시
             </span>
             <div className="flex gap-2">
               <button
