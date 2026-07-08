@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAuthed } from "../../../lib/auth";
 import { listPublicMarkets, type PublicMarket } from "../../../lib/markets";
 import {
+  displayKoreanName,
   formatDateTime,
   formatLocalPrice,
   getMarketFacets,
@@ -116,6 +117,25 @@ function MarketPriceBlock({
   );
 }
 
+/** 한국어명 우선 제목 — 한국어명이 있으면 정본 영문명을, 없으면 마켓 원문 제목을 부제로 쓴다. */
+function productNameParts(p: MarketProduct): {
+  title: string;
+  subtitle: string | null;
+} {
+  const korean = displayKoreanName(p.product_name_korean);
+  if (korean) {
+    return {
+      title: korean,
+      subtitle: korean !== p.product_name ? p.product_name : null,
+    };
+  }
+  return {
+    title: p.product_name,
+    subtitle:
+      p.raw_name && p.raw_name !== p.product_name ? p.raw_name : null,
+  };
+}
+
 function ProductStatusBadge({ available }: { available: boolean }) {
   return (
     <span
@@ -142,6 +162,7 @@ function ProductCard({
   marketCode: string;
   canEdit: boolean;
 }) {
+  const { title: productTitle, subtitle } = productNameParts(p);
   return (
     <article className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <ProductThumb
@@ -153,11 +174,11 @@ function ProductCard({
         {/* 제목은 가로폭을 다 쓰게 두고(최대 2줄), 상태 배지는 아래 줄에 배치.
             좁은 카드에서 제목 옆에 끼우면 '판매중'이 세로로 깨지므로 분리한다. */}
         <h2 className="line-clamp-2 font-medium leading-5 text-gray-900 dark:text-gray-100">
-          {p.product_name}
+          {productTitle}
         </h2>
-        {p.raw_name && p.raw_name !== p.product_name && (
+        {subtitle && (
           <p className="mt-1 line-clamp-1 text-xs leading-4 text-gray-500 dark:text-gray-400">
-            {p.raw_name}
+            {subtitle}
           </p>
         )}
         <div className="mt-1.5">
@@ -426,7 +447,9 @@ export default function MarketProductsPage() {
       {status === "ready" && products.length > 0 && !imageRich && (
         <>
           <div className="space-y-3 sm:hidden">
-            {products.map((p) => (
+            {products.map((p) => {
+              const { title: productTitle, subtitle } = productNameParts(p);
+              return (
               <article
                 key={p.product_url_id}
                 className="rounded-md border border-gray-200 bg-white px-3 py-3 dark:border-gray-800 dark:bg-gray-950"
@@ -444,11 +467,11 @@ export default function MarketProductsPage() {
                     />
                     <div className="min-w-0">
                       <h2 className="font-medium leading-5 text-gray-900 dark:text-gray-100">
-                        {p.product_name}
+                        {productTitle}
                       </h2>
-                      {p.raw_name && p.raw_name !== p.product_name && (
+                      {subtitle && (
                         <p className="mt-1 text-xs leading-4 text-gray-500 dark:text-gray-400">
-                          {p.raw_name}
+                          {subtitle}
                         </p>
                       )}
                     </div>
@@ -495,7 +518,8 @@ export default function MarketProductsPage() {
                   </Link>
                 )}
               </article>
-            ))}
+              );
+            })}
           </div>
 
           <div className="hidden overflow-x-auto sm:block">
@@ -513,7 +537,10 @@ export default function MarketProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {products.map((p) => {
+                  const { title: productTitle, subtitle } =
+                    productNameParts(p);
+                  return (
                   <tr
                     key={p.product_url_id}
                     className="border-b border-gray-100 align-top hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
@@ -531,11 +558,11 @@ export default function MarketProductsPage() {
                         />
                         <div className="min-w-0">
                           <div className="font-medium text-gray-900 dark:text-gray-100">
-                            {p.product_name}
+                            {productTitle}
                           </div>
-                          {p.raw_name && p.raw_name !== p.product_name && (
+                          {subtitle && (
                             <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                              {p.raw_name}
+                              {subtitle}
                             </div>
                           )}
                         </div>
@@ -574,7 +601,8 @@ export default function MarketProductsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

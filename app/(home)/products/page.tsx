@@ -10,6 +10,7 @@ import {
   type ProductOffer,
 } from "../../lib/catalog";
 import {
+  displayKoreanName,
   formatLocalPrice,
   productImageCandidates,
 } from "../../lib/products";
@@ -125,13 +126,6 @@ function OfferRow({
       </div>
     </li>
   );
-}
-
-/** 공식 병입은 기본값이라 이름에 노출하지 않는다 — 독립병입자명만 그대로 둔다. */
-function displayKoreanName(name: string | null | undefined): string | null {
-  if (!name) return null;
-  const stripped = name.replace(/^공식 병입\s*/, "").trim();
-  return stripped || name;
 }
 
 function CatalogCard({

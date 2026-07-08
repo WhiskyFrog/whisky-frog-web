@@ -158,6 +158,13 @@ export function formatLocalPrice(
   return symbol ? `${symbol}${num}` : `${currency} ${num}`;
 }
 
+/** 공식 병입은 기본값이라 이름에 노출하지 않는다 — 독립병입자명만 그대로 둔다. */
+export function displayKoreanName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const stripped = name.replace(/^공식 병입\s*/, "").trim();
+  return stripped || name;
+}
+
 // 무카와(Color Me Shop)는 크롤 데이터에 이미지 URL이 없지만, 상품 이미지가
 // source_url의 pid로 유도된다. 확장자가 상품마다 jpg/png로 갈려 후보를 순서대로
 // 준다 — 썸네일이 onError로 다음 후보를 시도한다.
