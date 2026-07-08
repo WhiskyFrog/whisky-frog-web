@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { FacetCount, MarketFacets } from "../lib/products";
 
 /** per-market·통합 카탈로그가 공유하는 위스키 패싯 필터 상태. `market`은 카탈로그에서만 쓴다. */
@@ -95,6 +96,24 @@ function countLabel(f: FacetCount): string {
   return f.korean ? `${f.korean} (${f.value})` : String(f.value);
 }
 
+function activeFilterCount(filters: ProductFilters): number {
+  return (
+    filters.market.length +
+    filters.cask_family.length +
+    filters.country.length +
+    filters.region.length +
+    filters.distillery_id.length +
+    filters.spirit_type.length +
+    filters.volume_ml.length +
+    (filters.bottling ? 1 : 0) +
+    (filters.peated !== null ? 1 : 0) +
+    (filters.age_min.trim() !== "" ? 1 : 0) +
+    (filters.age_max.trim() !== "" ? 1 : 0) +
+    (filters.abv_min.trim() !== "" ? 1 : 0) +
+    (filters.abv_max.trim() !== "" ? 1 : 0)
+  );
+}
+
 export function ProductFacetSidebar({
   facets,
   filters,
@@ -110,34 +129,55 @@ export function ProductFacetSidebar({
   marketOptions?: FacetCount[];
 }) {
   const ready = facets !== null;
+  // 모바일은 필터가 길어 상품을 한참 밀어내므로 기본 접힘 — xl 사이드바는 항상 펼침.
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const activeCount = activeFilterCount(filters);
+
   return (
     <aside className="w-full rounded-lg border border-gray-200 bg-white/95 p-3 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-950/95 xl:fixed xl:left-4 xl:top-20 xl:z-10 xl:max-h-[calc(100vh-6rem)] xl:w-72 xl:overflow-y-auto">
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 xl:mb-3">
         <div>
           <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             필터
+            {activeCount > 0 && (
+              <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                {activeCount}
+              </span>
+            )}
           </h2>
           <p className="mt-0.5 text-xs text-gray-400">
             {ready ? `${facets.total}개 기준` : "불러오는 중"}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onReset}
-          className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
-        >
-          초기화
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {activeCount > 0 && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="whitespace-nowrap rounded border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+            >
+              초기화
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            className="whitespace-nowrap rounded border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900 xl:hidden"
+          >
+            {mobileOpen ? "접기 ▲" : "펼치기 ▼"}
+          </button>
+        </div>
       </div>
 
-      {!ready && (
-        <div className="py-8 text-center text-xs text-gray-400">
-          필터를 불러오는 중
-        </div>
-      )}
+      <div className={`${mobileOpen ? "mt-3 block" : "hidden"} xl:block`}>
+        {!ready && (
+          <div className="py-8 text-center text-xs text-gray-400">
+            필터를 불러오는 중
+          </div>
+        )}
 
-      {ready && (
-        <div className="space-y-3">
+        {ready && (
+          <div className="space-y-3">
           {marketOptions && marketOptions.length > 0 && (
             <FacetSection title="마켓">
               {marketOptions.map((f) => {
@@ -395,8 +435,9 @@ export function ProductFacetSidebar({
               />
             </div>
           </FacetSection>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

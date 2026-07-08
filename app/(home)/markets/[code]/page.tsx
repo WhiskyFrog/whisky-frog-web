@@ -206,9 +206,11 @@ function ProductCard({
         </div>
 
         <div className="mt-auto pt-3">
-          <div className="flex items-end justify-between gap-2">
+          {/* 좁은 카드(모바일 2열)에서 두 가격 블록이 안 들어가면 줄바꿈 — 라벨·가격이
+              글자 단위로 세로로 꺾이거나 카드 밖으로 잘리는 것을 막는다. */}
+          <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
             <div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                 현지 가격
               </div>
               <div className="mt-0.5 whitespace-nowrap font-medium tabular-nums">
@@ -216,7 +218,7 @@ function ProductCard({
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                 <MarketPriceLabel product={p} market={market} />
               </div>
               <div className="mt-0.5 tabular-nums">
@@ -231,7 +233,7 @@ function ProductCard({
               href={p.source_url}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+              className="shrink-0 whitespace-nowrap font-medium text-blue-600 hover:underline dark:text-blue-400"
             >
               구매 링크
             </Link>

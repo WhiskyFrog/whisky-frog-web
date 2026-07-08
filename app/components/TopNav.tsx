@@ -33,14 +33,17 @@ export function TopNav() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-30 flex h-16 items-center justify-between border-b-2 border-[#D8A868] bg-[#FFF8EA]/95 px-5 text-[#302818] backdrop-blur sm:px-8 lg:px-12">
-      <div className="flex items-center gap-5 sm:gap-7">
-        <Link href="/" className="text-lg font-black tracking-wide">
+    <nav className="sticky top-0 z-30 flex h-16 items-center justify-between border-b-2 border-[#D8A868] bg-[#FFF8EA]/95 px-3 text-[#302818] backdrop-blur sm:px-8 lg:px-12">
+      <div className="flex items-center gap-3 sm:gap-7">
+        <Link
+          href="/"
+          className="whitespace-nowrap text-base font-black tracking-wide sm:text-lg"
+        >
           Whisky Frog
         </Link>
 
         <div className="group relative -mx-3">
-          <span className="inline-flex cursor-default select-none items-center px-3 py-3 text-sm font-bold text-[#5A421F] group-hover:text-[#302818]">
+          <span className="inline-flex cursor-default select-none items-center whitespace-nowrap px-3 py-3 text-xs font-bold text-[#5A421F] group-hover:text-[#302818] sm:text-sm">
             마켓
           </span>
           {/* top-full에 바로 붙이고 pt-2는 투명 브리지 — 트리거~카드 사이 호버 유지(틈 없음) */}
@@ -74,14 +77,14 @@ export function TopNav() {
 
         <Link
           href="/products"
-          className="text-sm font-bold text-[#5A421F] hover:text-[#302818]"
+          className="whitespace-nowrap text-xs font-bold text-[#5A421F] hover:text-[#302818] sm:text-sm"
         >
           가격 비교
         </Link>
 
         <Link
           href="/direct-price"
-          className="text-sm font-bold text-[#5A421F] hover:text-[#302818]"
+          className="whitespace-nowrap text-xs font-bold text-[#5A421F] hover:text-[#302818] sm:text-sm"
         >
           직구가 계산
         </Link>
@@ -89,7 +92,7 @@ export function TopNav() {
 
       <button
         onClick={handleAdminClick}
-        className="rounded-md border-2 border-[#805818] bg-[#F8E7C6] px-3 py-1.5 text-sm font-bold text-[#4B3418] hover:bg-[#FFEFCF]"
+        className="whitespace-nowrap rounded-md border-2 border-[#805818] bg-[#F8E7C6] px-2.5 py-1 text-xs font-bold text-[#4B3418] hover:bg-[#FFEFCF] sm:px-3 sm:py-1.5 sm:text-sm"
       >
         관리자
       </button>
