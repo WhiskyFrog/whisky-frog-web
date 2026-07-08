@@ -9,7 +9,11 @@ import {
   type CatalogProduct,
   type ProductOffer,
 } from "../../lib/catalog";
-import { formatLocalPrice } from "../../lib/products";
+import {
+  formatLocalPrice,
+  productImageCandidates,
+} from "../../lib/products";
+import { ProductThumb } from "../../components/ProductThumb";
 import { formatKrw } from "../../lib/directPrice";
 import {
   EMPTY_FILTERS,
@@ -22,51 +26,6 @@ type Status = "loading" | "error" | "ready";
 
 const PAGE_SIZE = 50;
 const SEARCH_DEBOUNCE_MS = 350;
-
-function ProductThumb({
-  src,
-  alt,
-  className,
-}: {
-  src: string | null | undefined;
-  alt: string;
-  className?: string;
-}) {
-  const [failed, setFailed] = useState(false);
-  const box = `flex shrink-0 items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900 ${className ?? ""}`;
-
-  if (!src || failed) {
-    return (
-      <div className={box} aria-hidden>
-        <svg
-          className="h-1/2 w-1/2 text-gray-300 dark:text-gray-600"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <path d="m21 15-5-5L5 21" />
-        </svg>
-      </div>
-    );
-  }
-
-  return (
-    <div className={box}>
-      {/* 외부 마켓 호스트 이미지 — next/image 도메인 화이트리스트 회피 위해 일반 img. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className="h-full w-full object-contain"
-      />
-    </div>
-  );
-}
 
 function AttributeBadges({ product: p }: { product: CatalogProduct }) {
   const badges: string[] = [];
@@ -184,15 +143,29 @@ function CatalogCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const koreanName = displayKoreanName(p.product_name_korean);
-  const thumb = p.offers.find((o) => o.image_url)?.image_url;
   const representative = p.min_direct_price_krw ?? p.min_local_price_krw;
   const visibleOffers = expanded ? p.offers : p.offers.slice(0, 4);
+
+  // 실제 image_url을 가진 오퍼 우선, 없으면 URL 유도가 되는 오퍼(무카와)의 후보 사용.
+  const thumbSrcs = (() => {
+    const real = p.offers.find((o) => o.image_url)?.image_url;
+    if (real) return [real];
+    for (const o of p.offers) {
+      const candidates = productImageCandidates(
+        o.market_code,
+        o.image_url,
+        o.source_url,
+      );
+      if (candidates.length > 0) return candidates;
+    }
+    return [];
+  })();
 
   return (
     <article className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
       <div className="flex items-start gap-4">
         <ProductThumb
-          src={thumb}
+          srcs={thumbSrcs}
           alt={p.product_name}
           className="h-20 w-20 rounded-md border border-gray-100 dark:border-gray-800 sm:h-24 sm:w-24"
         />

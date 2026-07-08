@@ -158,6 +158,27 @@ export function formatLocalPrice(
   return symbol ? `${symbol}${num}` : `${currency} ${num}`;
 }
 
+// 무카와(Color Me Shop)는 크롤 데이터에 이미지 URL이 없지만, 상품 이미지가
+// source_url의 pid로 유도된다. 확장자가 상품마다 jpg/png로 갈려 후보를 순서대로
+// 준다 — 썸네일이 onError로 다음 후보를 시도한다.
+const MUKAWA_IMAGE_BASE = "https://img07.shop-pro.jp/PA01356/240/product";
+
+/** 상품 썸네일 후보 URL — image_url이 있으면 그대로, 없으면 마켓별 유도 규칙. */
+export function productImageCandidates(
+  marketCode: string | null | undefined,
+  imageUrl: string | null | undefined,
+  sourceUrl: string | null | undefined,
+): string[] {
+  if (imageUrl) return [imageUrl];
+  if (marketCode === "muk" && sourceUrl) {
+    const pid = /[?&]pid=(\d+)/.exec(sourceUrl)?.[1];
+    if (pid) {
+      return [`${MUKAWA_IMAGE_BASE}/${pid}.jpg`, `${MUKAWA_IMAGE_BASE}/${pid}.png`];
+    }
+  }
+  return [];
+}
+
 export function formatDateTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";

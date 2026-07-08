@@ -10,9 +10,11 @@ import {
   formatLocalPrice,
   getMarketFacets,
   listMarketProducts,
+  productImageCandidates,
   type MarketFacets,
   type MarketProduct,
 } from "../../../lib/products";
+import { ProductThumb } from "../../../components/ProductThumb";
 import { formatKrw } from "../../../lib/directPrice";
 import {
   EMPTY_FILTERS,
@@ -114,51 +116,6 @@ function MarketPriceBlock({
   );
 }
 
-function ProductThumb({
-  src,
-  alt,
-  className,
-}: {
-  src: string | null | undefined;
-  alt: string;
-  className?: string;
-}) {
-  const [failed, setFailed] = useState(false);
-  const box = `flex shrink-0 items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900 ${className ?? ""}`;
-
-  if (!src || failed) {
-    return (
-      <div className={box} aria-hidden>
-        <svg
-          className="h-1/2 w-1/2 text-gray-300 dark:text-gray-600"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <path d="m21 15-5-5L5 21" />
-        </svg>
-      </div>
-    );
-  }
-
-  return (
-    <div className={box}>
-      {/* 외부 마켓 호스트 이미지 — next/image 도메인 화이트리스트 회피 위해 일반 img. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className="h-full w-full object-contain"
-      />
-    </div>
-  );
-}
-
 function ProductStatusBadge({ available }: { available: boolean }) {
   return (
     <span
@@ -177,16 +134,18 @@ function ProductStatusBadge({ available }: { available: boolean }) {
 function ProductCard({
   product: p,
   market,
+  marketCode,
   canEdit,
 }: {
   product: MarketProduct;
   market: PublicMarket | undefined;
+  marketCode: string;
   canEdit: boolean;
 }) {
   return (
     <article className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <ProductThumb
-        src={p.image_url}
+        srcs={productImageCandidates(marketCode, p.image_url, p.source_url)}
         alt={p.product_name}
         className="aspect-square w-full border-b border-gray-100 dark:border-gray-800"
       />
@@ -362,11 +321,14 @@ export default function MarketProductsPage() {
 
   // 이미지가 잘 나오는 마켓(위스키피플 등) 판별 — 상품 절반 이상이 이미지를 가지면
   // 테이블 대신 이미지 중심 카드 그리드(큰 화면 한 줄 4개)로 노출.
+  // 무카와처럼 image_url이 없어도 URL 유도가 되는 마켓은 후보 기준으로 센다.
   const imageRich = useMemo(() => {
     if (products.length === 0) return false;
-    const withImage = products.filter((p) => p.image_url).length;
+    const withImage = products.filter(
+      (p) => productImageCandidates(marketCode, p.image_url, p.source_url).length > 0,
+    ).length;
     return withImage / products.length >= 0.5;
-  }, [products]);
+  }, [marketCode, products]);
 
   const updateFilters = useCallback(
     (updater: (prev: ProductFilters) => ProductFilters) => {
@@ -454,6 +416,7 @@ export default function MarketProductsPage() {
               key={p.product_url_id}
               product={p}
               market={market}
+              marketCode={marketCode}
               canEdit={canEditProducts}
             />
           ))}
@@ -471,7 +434,11 @@ export default function MarketProductsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
                     <ProductThumb
-                      src={p.image_url}
+                      srcs={productImageCandidates(
+                        marketCode,
+                        p.image_url,
+                        p.source_url,
+                      )}
                       alt={p.product_name}
                       className="h-14 w-14 rounded-md border border-gray-100 dark:border-gray-800"
                     />
@@ -554,7 +521,11 @@ export default function MarketProductsPage() {
                     <td className="px-3 py-3">
                       <div className="flex items-start gap-3">
                         <ProductThumb
-                          src={p.image_url}
+                          srcs={productImageCandidates(
+                            marketCode,
+                            p.image_url,
+                            p.source_url,
+                          )}
                           alt={p.product_name}
                           className="h-12 w-12 rounded border border-gray-100 dark:border-gray-800"
                         />
