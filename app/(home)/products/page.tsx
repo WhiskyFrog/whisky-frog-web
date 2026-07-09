@@ -10,6 +10,8 @@ import {
   type ProductOffer,
 } from "../../lib/catalog";
 import {
+  displayProductKorean,
+  distilleryNameMap,
   formatLocalPrice,
   productImageCandidates,
 } from "../../lib/products";
@@ -135,12 +137,14 @@ function OfferRow({
 function CatalogCard({
   product: p,
   selectedMarkets,
+  distilleryNames,
 }: {
   product: CatalogProduct;
   selectedMarkets: string[];
+  distilleryNames: ReadonlyMap<string, string>;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const koreanName = p.product_name_korean;
+  const koreanName = displayProductKorean(p, distilleryNames);
   const representative = p.min_direct_price_krw ?? p.min_local_price_krw;
   const visibleOffers = expanded ? p.offers : p.offers.slice(0, 4);
 
@@ -322,6 +326,9 @@ export default function CatalogPage() {
     setFilters(EMPTY_FILTERS);
   }, []);
 
+  // 에디션 손실 한글명 판별용 — 패싯 증류소 트리에서 한글명→영문명.
+  const distilleryNames = useMemo(() => distilleryNameMap(facets), [facets]);
+
   const selectedMarketNames = useMemo(() => {
     if (!facets || filters.market.length === 0) return [];
     return facets.market
@@ -428,6 +435,7 @@ export default function CatalogPage() {
                 key={p.product_id}
                 product={p}
                 selectedMarkets={filters.market}
+                distilleryNames={distilleryNames}
               />
             ))}
           </div>
