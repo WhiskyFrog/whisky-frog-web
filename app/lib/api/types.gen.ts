@@ -73,7 +73,7 @@ export interface paths {
         };
         /**
          * Market Facets
-         * @description 마켓의 매칭 매물에 대한 위스키 사전정보 패싯 값/카운트를 반환한다(필터 패널 구성용).
+         * @description 마켓의 매칭 매물에 대한 패싯 값/카운트 — 목록과 동일한 필터로 교차 좁힘(DECISIONS 035).
          */
         get: operations["market_facets_api_markets__market_code__facets_get"];
         put?: never;
@@ -113,7 +113,7 @@ export interface paths {
         };
         /**
          * Catalog Facets
-         * @description 전 활성 마켓 통합 패싯 — 상품(distinct) 단위 카운트 + 마켓 축.
+         * @description 전 활성 마켓 통합 패싯 — 상품(distinct) 단위, 교차 좁힘 + 마켓 축(DECISIONS 035).
          */
         get: operations["catalog_facets_api_products_facets_get"];
         put?: never;
@@ -1320,10 +1320,16 @@ export interface components {
          *     `market`은 상품이 팔리는 마켓 축(value=마켓 code, korean=마켓 표시명)이다.
          */
         CatalogFacetsOut: {
+            /** Axes */
+            axes: string[];
             /** Total */
             total: number;
             /** Cask Family */
             cask_family: components["schemas"]["FacetCount"][];
+            /** Cask Type */
+            cask_type: components["schemas"]["FacetCount"][];
+            /** Cask Material */
+            cask_material: components["schemas"]["FacetCount"][];
             /** Country */
             country: components["schemas"]["FacetCount"][];
             /** Region */
@@ -1369,6 +1375,10 @@ export interface components {
             cask_korean?: string | null;
             /** Cask Family */
             cask_family?: string | null;
+            /** Cask Type Name */
+            cask_type_name?: string | null;
+            /** Cask Material */
+            cask_material?: string | null;
             /** Country */
             country?: string | null;
             /** Region */
@@ -1699,13 +1709,28 @@ export interface components {
          * MarketFacetsOut
          * @description 마켓의 매칭(기본 판매중) 매물에 대한 패싯별 값/카운트 — 프론트 필터 패널 구성용.
          *
-         *     ⚠️ 각 패싯 카운트는 **다른 패싯 선택과 무관한 전체 집계**다(교차 좁힘 없음, MVP).
+         *     **교차 좁힘(DECISIONS 035):** 목록과 동일한 필터 파라미터를 받아, 각 축 카운트는
+         *     **자기 축 필터만 제외한** 나머지 필터가 적용된 집합으로 센다(자기 축을 빼는 이유:
+         *     셰리를 선택해도 버번 카운트가 보여야 같은 축 다중선택이 가능). `total`은 전 필터 적용.
+         *
+         *     `axes`(DECISIONS 035): 선택된 주종에 의미 있는 축 목록 — 프론트는 여기 없는 패널을
+         *     숨긴다(진에 캐스크/피트/숙성연수 무의미, 주종 미선택이면 전체).
+         *
+         *     캐스크는 3축: `cask_family`(상위 — 미분류는 'other'가 아니라 'unknown'으로 분리),
+         *     `cask_type`(하위 표준명 — Oloroso/PX…, 미분류 제외), `cask_material`(재질/수종 —
+         *     미표기는 'unspecified').
          */
         MarketFacetsOut: {
+            /** Axes */
+            axes: string[];
             /** Total */
             total: number;
             /** Cask Family */
             cask_family: components["schemas"]["FacetCount"][];
+            /** Cask Type */
+            cask_type: components["schemas"]["FacetCount"][];
+            /** Cask Material */
+            cask_material: components["schemas"]["FacetCount"][];
             /** Country */
             country: components["schemas"]["FacetCount"][];
             /** Region */
@@ -1910,6 +1935,10 @@ export interface components {
             product_name_korean?: string | null;
             /** Cask Family */
             cask_family?: string | null;
+            /** Cask Type Name */
+            cask_type_name?: string | null;
+            /** Cask Material */
+            cask_material?: string | null;
             /** Country */
             country?: string | null;
             /** Region */
@@ -2797,8 +2826,12 @@ export interface operations {
             query?: {
                 /** @description 최신 가격 이력의 판매가능 여부. 생략 기본값은 true. */
                 available?: boolean | null;
-                /** @description 캐스크 상위분류(sherry/bourbon/wine…). 여러 값=OR. */
+                /** @description 캐스크 상위분류(sherry/bourbon/wine…/other). 'unknown'=미분류. 여러 값=OR. */
                 cask_family?: string[] | null;
+                /** @description 캐스크 하위 표준명(Oloroso/PX…) 정확일치. 여러 값=OR. */
+                cask_type?: string[] | null;
+                /** @description 캐스크 재질/수종(american_oak…/unspecified). 여러 값=OR. */
+                cask_material?: string[] | null;
                 /** @description distillery production country. Multiple values=OR. */
                 country?: string[] | null;
                 /** @description 증류소 지역(Islay…). 여러 값=OR. */
@@ -2859,6 +2892,23 @@ export interface operations {
             query?: {
                 /** @description 판매가능 매물만 집계(목록 기본과 동일). 생략 기본 true. */
                 available?: boolean | null;
+                /** @description 목록과 동일 — 교차 좁힘용. */
+                cask_family?: string[] | null;
+                cask_type?: string[] | null;
+                cask_material?: string[] | null;
+                country?: string[] | null;
+                region?: string[] | null;
+                distillery_id?: number[] | null;
+                bottling?: string | null;
+                /** @description 주종(1차 축) — `axes`(주종별 노출 축)도 이 값으로 결정된다. */
+                spirit_type?: string[] | null;
+                peated?: boolean | null;
+                age_min?: number | null;
+                age_max?: number | null;
+                abv_min?: number | string | null;
+                abv_max?: number | string | null;
+                volume_ml?: number[] | null;
+                limited?: boolean | null;
             };
             header?: never;
             path: {
@@ -2897,8 +2947,14 @@ export interface operations {
                 market?: string[] | null;
                 /** @description 상품 정본명 또는 마켓 원문 제목 ILIKE 부분일치. */
                 search?: string | null;
-                /** @description 캐스크 상위분류. 여러 값=OR. */
+                /** @description 정렬. name=정본명 가나다 / price=**근사** 원화가 오름차순(최저 현지가×현재 주차 환율 — 세금·배송 미포함이라 직구가 순위와 드물게 다를 수 있음). 환율 미수집 통화 매물뿐인 상품은 뒤로. */
+                sort?: string;
+                /** @description 캐스크 상위분류. 'unknown'=미분류. 여러 값=OR. */
                 cask_family?: string[] | null;
+                /** @description 캐스크 하위 표준명 정확일치. 여러 값=OR. */
+                cask_type?: string[] | null;
+                /** @description 캐스크 재질/수종. 여러 값=OR. */
+                cask_material?: string[] | null;
                 /** @description 생산 국가. 여러 값=OR. */
                 country?: string[] | null;
                 /** @description 증류소 지역. 여러 값=OR. */
@@ -2953,6 +3009,26 @@ export interface operations {
             query?: {
                 /** @description 판매가능 매물만 집계(목록 기본과 동일). 생략 기본 true. */
                 available?: boolean | null;
+                /** @description 마켓 code 필터(1차 축). 여러 값=OR — 교차 좁힘용. */
+                market?: string[] | null;
+                search?: string | null;
+                /** @description 목록과 동일 — 교차 좁힘용. */
+                cask_family?: string[] | null;
+                cask_type?: string[] | null;
+                cask_material?: string[] | null;
+                country?: string[] | null;
+                region?: string[] | null;
+                distillery_id?: number[] | null;
+                bottling?: string | null;
+                /** @description 주종(1차 축) — `axes`(주종별 노출 축)도 이 값으로 결정된다. */
+                spirit_type?: string[] | null;
+                peated?: boolean | null;
+                age_min?: number | null;
+                age_max?: number | null;
+                abv_min?: number | string | null;
+                abv_max?: number | string | null;
+                volume_ml?: number[] | null;
+                limited?: boolean | null;
             };
             header?: never;
             path?: never;

@@ -7,6 +7,8 @@ import type { FacetCount, MarketFacets } from "../lib/products";
 export type ProductFilters = {
   market: string[];
   cask_family: string[];
+  cask_type: string[];
+  cask_material: string[];
   country: string[];
   region: string[];
   distillery_id: number[];
@@ -23,6 +25,8 @@ export type ProductFilters = {
 export const EMPTY_FILTERS: ProductFilters = {
   market: [],
   cask_family: [],
+  cask_type: [],
+  cask_material: [],
   country: [],
   region: [],
   distillery_id: [],
@@ -123,6 +127,38 @@ function FacetSection({
   );
 }
 
+/** 값 배열 패싯의 체크박스 섹션 — 마켓/주종/캐스크 3축 등 동일 패턴 공용. */
+function CheckboxFacetSection({
+  title,
+  options,
+  selected,
+  labelOf,
+  onToggle,
+}: {
+  title: string;
+  options: FacetCount[];
+  selected: string[];
+  labelOf: (f: FacetCount) => string;
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <FacetSection title={title} selected={selected.length}>
+      {options.map((f) => {
+        const value = String(f.value);
+        return (
+          <FacetOption
+            key={value}
+            checked={selected.includes(value)}
+            label={labelOf(f)}
+            count={f.count}
+            onChange={() => onToggle(value)}
+          />
+        );
+      })}
+    </FacetSection>
+  );
+}
+
 function countLabel(f: FacetCount): string {
   return f.korean ? `${f.korean} (${f.value})` : String(f.value);
 }
@@ -135,6 +171,8 @@ function activeFilterCount(filters: ProductFilters): number {
   return (
     filters.market.length +
     filters.cask_family.length +
+    filters.cask_type.length +
+    filters.cask_material.length +
     filters.country.length +
     filters.region.length +
     filters.distillery_id.length +
@@ -147,9 +185,18 @@ function activeFilterCount(filters: ProductFilters): number {
   );
 }
 
+/** 운영 데이터 특성상 미분류('unknown')가 최다 카운트 — 목록 맨 아래로 내린다. */
+function unknownLast(options: FacetCount[]): FacetCount[] {
+  return [...options].sort(
+    (a, b) => Number(a.value === "unknown") - Number(b.value === "unknown"),
+  );
+}
+
 /**
  * 패싯 필터 — 평소엔 "필터" 버튼만 노출하고, 누르면 왼쪽에서 드로어가 열린다.
  * 필터는 체크 즉시 적용되므로 드로어는 열어둔 채 결과가 갱신된다.
+ * 패싯은 교차 좁힘(DECISIONS 035)이라 필터가 바뀔 때마다 카운트가 갈아끼워지고,
+ * 응답 `axes`에 없는 축 패널은 숨긴다(주종별 의미 없는 축 — 진에 캐스크/피트 등).
  */
 export function ProductFacetSidebar({
   facets,
@@ -183,6 +230,12 @@ export function ProductFacetSidebar({
       document.body.style.overflow = prevOverflow;
     };
   }, [open]);
+
+  const axisOn = (axis: string) => facets !== null && facets.axes.includes(axis);
+  const toggleOf =
+    (key: "market" | "cask_family" | "cask_type" | "cask_material" | "country" | "region" | "spirit_type") =>
+    (value: string) =>
+      onFilters((prev) => ({ ...prev, [key]: toggleArray(prev[key], value) }));
 
   return (
     <>
@@ -231,7 +284,7 @@ export function ProductFacetSidebar({
               <CountBadge count={activeCount} />
             </h2>
             <p className="mt-0.5 text-xs text-gray-400">
-              {ready ? `${facets.total}개 기준` : "불러오는 중"}
+              {ready ? `${facets.total}개 상품` : "불러오는 중"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -273,96 +326,95 @@ export function ProductFacetSidebar({
 
           {ready && (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {marketOptions && marketOptions.length > 0 && (
-                <FacetSection title="마켓" selected={filters.market.length}>
-                  {marketOptions.map((f) => {
-                    const value = String(f.value);
-                    return (
-                      <FacetOption
-                        key={value}
-                        checked={filters.market.includes(value)}
-                        label={f.korean ?? value}
-                        count={f.count}
-                        onChange={() =>
-                          onFilters((prev) => ({
-                            ...prev,
-                            market: toggleArray(prev.market, value),
-                          }))
-                        }
-                      />
-                    );
-                  })}
-                </FacetSection>
+              {/* 1차 축(마켓/주종)은 상단 고정 — axes 재구성의 기준 축. */}
+              {marketOptions &&
+                marketOptions.length > 0 &&
+                axisOn("market") && (
+                  <CheckboxFacetSection
+                    title="마켓"
+                    options={marketOptions}
+                    selected={filters.market}
+                    labelOf={(f) => f.korean ?? String(f.value)}
+                    onToggle={toggleOf("market")}
+                  />
+                )}
+
+              {facets.spirit_type.length > 0 && axisOn("spirit_type") && (
+                <CheckboxFacetSection
+                  title="주종"
+                  options={facets.spirit_type}
+                  selected={filters.spirit_type}
+                  labelOf={countLabel}
+                  onToggle={toggleOf("spirit_type")}
+                />
               )}
 
-              {facets.cask_family.length > 0 && (
-                <FacetSection
+              {facets.cask_family.length > 0 && axisOn("cask_family") && (
+                <CheckboxFacetSection
                   title="캐스크"
-                  selected={filters.cask_family.length}
-                >
-                  {facets.cask_family.map((f) => {
-                    const value = String(f.value);
-                    return (
-                      <FacetOption
-                        key={value}
-                        checked={filters.cask_family.includes(value)}
-                        label={countLabel(f)}
-                        count={f.count}
-                        onChange={() =>
-                          onFilters((prev) => ({
-                            ...prev,
-                            cask_family: toggleArray(prev.cask_family, value),
-                          }))
-                        }
-                      />
-                    );
-                  })}
-                </FacetSection>
+                  options={unknownLast(facets.cask_family)}
+                  selected={filters.cask_family}
+                  labelOf={countLabel}
+                  onToggle={toggleOf("cask_family")}
+                />
               )}
 
-              {(facets.country.length > 0 || facets.region.length > 0) && (
+              {facets.cask_type.length > 0 && axisOn("cask_type") && (
+                <CheckboxFacetSection
+                  title="캐스크 타입"
+                  options={facets.cask_type}
+                  selected={filters.cask_type}
+                  labelOf={countLabel}
+                  onToggle={toggleOf("cask_type")}
+                />
+              )}
+
+              {facets.cask_material.length > 0 && axisOn("cask_material") && (
+                <CheckboxFacetSection
+                  title="캐스크 재질"
+                  options={facets.cask_material}
+                  selected={filters.cask_material}
+                  labelOf={countLabel}
+                  onToggle={toggleOf("cask_material")}
+                />
+              )}
+
+              {((facets.country.length > 0 && axisOn("country")) ||
+                (facets.region.length > 0 && axisOn("region"))) && (
                 <FacetSection
                   title="지역"
                   selected={filters.country.length + filters.region.length}
                 >
-                  {facets.country.map((f) => {
-                    const value = String(f.value);
-                    return (
-                      <FacetOption
-                        key={`country-${value}`}
-                        checked={filters.country.includes(value)}
-                        label={countLabel(f)}
-                        count={f.count}
-                        onChange={() =>
-                          onFilters((prev) => ({
-                            ...prev,
-                            country: toggleArray(prev.country, value),
-                          }))
-                        }
-                      />
-                    );
-                  })}
-                  {facets.region.map((f) => {
-                    const value = String(f.value);
-                    return (
-                      <FacetOption
-                        key={value}
-                        checked={filters.region.includes(value)}
-                        label={countLabel(f)}
-                        count={f.count}
-                        onChange={() =>
-                          onFilters((prev) => ({
-                            ...prev,
-                            region: toggleArray(prev.region, value),
-                          }))
-                        }
-                      />
-                    );
-                  })}
+                  {axisOn("country") &&
+                    facets.country.map((f) => {
+                      const value = String(f.value);
+                      return (
+                        <FacetOption
+                          key={`country-${value}`}
+                          checked={filters.country.includes(value)}
+                          label={countLabel(f)}
+                          count={f.count}
+                          onChange={() => toggleOf("country")(value)}
+                        />
+                      );
+                    })}
+                  {axisOn("region") &&
+                    facets.region.map((f) => {
+                      const value = String(f.value);
+                      return (
+                        <FacetOption
+                          key={value}
+                          checked={filters.region.includes(value)}
+                          label={countLabel(f)}
+                          count={f.count}
+                          onChange={() => toggleOf("region")(value)}
+                        />
+                      );
+                    })}
                 </FacetSection>
               )}
 
-              {facets.distillery.length > 0 && (
+              {facets.distillery.length > 0 && axisOn("distillery") && (
                 <FacetSection
                   title="증류소"
                   selected={filters.distillery_id.length}
@@ -391,90 +443,77 @@ export function ProductFacetSidebar({
                 </FacetSection>
               )}
 
-              {facets.spirit_type.length > 0 && (
+              {(axisOn("bottling") || axisOn("peated")) && (
                 <FacetSection
-                  title="주종"
-                  selected={filters.spirit_type.length}
+                  title={[
+                    axisOn("bottling") && "병입",
+                    axisOn("peated") && "피트",
+                  ]
+                    .filter(Boolean)
+                    .join(" / ")}
+                  selected={
+                    (filters.bottling ? 1 : 0) +
+                    (filters.peated !== null ? 1 : 0)
+                  }
                 >
-                  {facets.spirit_type.map((f) => {
-                    const value = String(f.value);
-                    return (
-                      <FacetOption
-                        key={value}
-                        checked={filters.spirit_type.includes(value)}
-                        label={countLabel(f)}
-                        count={f.count}
-                        onChange={() =>
-                          onFilters((prev) => ({
-                            ...prev,
-                            spirit_type: toggleArray(prev.spirit_type, value),
-                          }))
-                        }
-                      />
-                    );
-                  })}
+                  <div className="grid grid-cols-2 gap-1">
+                    {axisOn("bottling") &&
+                      [
+                        ["official", "공식", facets.bottling.official],
+                        ["independent", "독립", facets.bottling.independent],
+                      ].map(([value, label, count]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() =>
+                            onFilters((prev) => ({
+                              ...prev,
+                              bottling:
+                                prev.bottling === value
+                                  ? null
+                                  : (value as "official" | "independent"),
+                            }))
+                          }
+                          className={`rounded border px-2 py-1 text-xs ${
+                            filters.bottling === value
+                              ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                              : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+                          }`}
+                        >
+                          {label} {count}
+                        </button>
+                      ))}
+                    {axisOn("peated") &&
+                      [
+                        [true, "피트", facets.peated.peated],
+                        [false, "논피트", facets.peated.unpeated],
+                      ].map(([value, label, count]) => (
+                        <button
+                          key={String(value)}
+                          type="button"
+                          onClick={() =>
+                            onFilters((prev) => ({
+                              ...prev,
+                              peated:
+                                prev.peated === value
+                                  ? null
+                                  : (value as boolean),
+                            }))
+                          }
+                          className={`rounded border px-2 py-1 text-xs ${
+                            filters.peated === value
+                              ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                              : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+                          }`}
+                        >
+                          {label} {count}
+                        </button>
+                      ))}
+                  </div>
                 </FacetSection>
               )}
 
-              <FacetSection
-                title="병입 / 피트"
-                selected={
-                  (filters.bottling ? 1 : 0) + (filters.peated !== null ? 1 : 0)
-                }
-              >
-                <div className="grid grid-cols-2 gap-1">
-                  {[
-                    ["official", "공식", facets.bottling.official],
-                    ["independent", "독립", facets.bottling.independent],
-                  ].map(([value, label, count]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        onFilters((prev) => ({
-                          ...prev,
-                          bottling:
-                            prev.bottling === value
-                              ? null
-                              : (value as "official" | "independent"),
-                        }))
-                      }
-                      className={`rounded border px-2 py-1 text-xs ${
-                        filters.bottling === value
-                          ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
-                          : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
-                      }`}
-                    >
-                      {label} {count}
-                    </button>
-                  ))}
-                  {[
-                    [true, "피트", facets.peated.peated],
-                    [false, "논피트", facets.peated.unpeated],
-                  ].map(([value, label, count]) => (
-                    <button
-                      key={String(value)}
-                      type="button"
-                      onClick={() =>
-                        onFilters((prev) => ({
-                          ...prev,
-                          peated:
-                            prev.peated === value ? null : (value as boolean),
-                        }))
-                      }
-                      className={`rounded border px-2 py-1 text-xs ${
-                        filters.peated === value
-                          ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
-                          : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
-                      }`}
-                    >
-                      {label} {count}
-                    </button>
-                  ))}
-                </div>
-              </FacetSection>
-
-              {facets.volume_ml.length > 0 && (
+              {facets.volume_ml.length > 0 && axisOn("volume_ml") && (
                 <FacetSection title="용량" selected={filters.volume_ml.length}>
                   <div className="flex flex-wrap gap-1">
                     {facets.volume_ml.map((f) => {
@@ -503,72 +542,88 @@ export function ProductFacetSidebar({
                 </FacetSection>
               )}
 
-              <FacetSection
-                title="숙성 / 도수"
-                selected={
-                  rangeCount(filters.age_min, filters.age_max) +
-                  rangeCount(filters.abv_min, filters.abv_max)
-                }
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    placeholder={`숙성 ${facets.age_years.min ?? ""}`}
-                    value={filters.age_min}
-                    onChange={(e) =>
-                      onFilters((prev) => ({
-                        ...prev,
-                        age_min: e.target.value,
-                      }))
-                    }
-                    className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    placeholder={`~ ${facets.age_years.max ?? ""}`}
-                    value={filters.age_max}
-                    onChange={(e) =>
-                      onFilters((prev) => ({
-                        ...prev,
-                        age_max: e.target.value,
-                      }))
-                    }
-                    className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    placeholder={`도수 ${facets.abv.min ?? ""}`}
-                    value={filters.abv_min}
-                    onChange={(e) =>
-                      onFilters((prev) => ({
-                        ...prev,
-                        abv_min: e.target.value,
-                      }))
-                    }
-                    className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    placeholder={`~ ${facets.abv.max ?? ""}`}
-                    value={filters.abv_max}
-                    onChange={(e) =>
-                      onFilters((prev) => ({
-                        ...prev,
-                        abv_max: e.target.value,
-                      }))
-                    }
-                    className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
-                  />
-                </div>
-              </FacetSection>
+              {(axisOn("age_years") || axisOn("abv")) && (
+                <FacetSection
+                  title={[axisOn("age_years") && "숙성", axisOn("abv") && "도수"]
+                    .filter(Boolean)
+                    .join(" / ")}
+                  selected={
+                    (axisOn("age_years")
+                      ? rangeCount(filters.age_min, filters.age_max)
+                      : 0) +
+                    (axisOn("abv")
+                      ? rangeCount(filters.abv_min, filters.abv_max)
+                      : 0)
+                  }
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    {axisOn("age_years") && (
+                      <>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder={`숙성 ${facets.age_years.min ?? ""}`}
+                          value={filters.age_min}
+                          onChange={(e) =>
+                            onFilters((prev) => ({
+                              ...prev,
+                              age_min: e.target.value,
+                            }))
+                          }
+                          className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder={`~ ${facets.age_years.max ?? ""}`}
+                          value={filters.age_max}
+                          onChange={(e) =>
+                            onFilters((prev) => ({
+                              ...prev,
+                              age_max: e.target.value,
+                            }))
+                          }
+                          className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
+                        />
+                      </>
+                    )}
+                    {axisOn("abv") && (
+                      <>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder={`도수 ${facets.abv.min ?? ""}`}
+                          value={filters.abv_min}
+                          onChange={(e) =>
+                            onFilters((prev) => ({
+                              ...prev,
+                              abv_min: e.target.value,
+                            }))
+                          }
+                          className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder={`~ ${facets.abv.max ?? ""}`}
+                          value={filters.abv_max}
+                          onChange={(e) =>
+                            onFilters((prev) => ({
+                              ...prev,
+                              abv_max: e.target.value,
+                            }))
+                          }
+                          className="min-w-0 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-950"
+                        />
+                      </>
+                    )}
+                  </div>
+                </FacetSection>
+              )}
             </div>
           )}
         </div>

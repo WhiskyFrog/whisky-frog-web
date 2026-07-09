@@ -14,6 +14,8 @@ export interface CatalogQuery extends MarketProductQuery {
   /** 마켓 code 필터(OR). 상품 선정에만 적용 — 오퍼는 전 마켓이 내려온다. */
   market?: string[];
   search?: string | null;
+  /** name=정본명 가나다(기본) / price=근사 원화가 오름차순(세금·배송 미포함). */
+  sort?: "name" | "price";
 }
 
 function appendValues(
@@ -36,15 +38,14 @@ function setIfPresent(
   }
 }
 
-export async function listCatalogProducts(
-  query: CatalogQuery = {},
-  signal?: AbortSignal,
-): Promise<CatalogProduct[]> {
-  const params = new URLSearchParams();
+/** 목록·패싯 공용 필터 파라미터 — 패싯도 교차 좁힘(DECISIONS 035)으로 같은 필터를 받는다. */
+function appendCatalogFilterParams(params: URLSearchParams, query: CatalogQuery) {
   setIfPresent(params, "available", query.available);
   appendValues(params, "market", query.market);
   setIfPresent(params, "search", query.search?.trim() || null);
   appendValues(params, "cask_family", query.cask_family);
+  appendValues(params, "cask_type", query.cask_type);
+  appendValues(params, "cask_material", query.cask_material);
   appendValues(params, "country", query.country);
   appendValues(params, "region", query.region);
   appendValues(params, "distillery_id", query.distillery_id);
@@ -57,6 +58,15 @@ export async function listCatalogProducts(
   appendValues(params, "spirit_type", query.spirit_type);
   appendValues(params, "volume_ml", query.volume_ml);
   setIfPresent(params, "limited", query.limited);
+}
+
+export async function listCatalogProducts(
+  query: CatalogQuery = {},
+  signal?: AbortSignal,
+): Promise<CatalogProduct[]> {
+  const params = new URLSearchParams();
+  appendCatalogFilterParams(params, query);
+  setIfPresent(params, "sort", query.sort);
   setIfPresent(params, "limit", query.limit);
   setIfPresent(params, "offset", query.offset);
 
@@ -70,11 +80,11 @@ export async function listCatalogProducts(
 }
 
 export async function getCatalogFacets(
-  query: Pick<CatalogQuery, "available"> = {},
+  query: CatalogQuery = {},
   signal?: AbortSignal,
 ): Promise<CatalogFacets> {
   const params = new URLSearchParams();
-  setIfPresent(params, "available", query.available);
+  appendCatalogFilterParams(params, query);
   const qs = params.toString();
   const res = await fetch(
     `${API_BASE_URL}/api/products/facets${qs ? `?${qs}` : ""}`,

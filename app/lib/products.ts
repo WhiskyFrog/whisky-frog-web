@@ -7,6 +7,8 @@ export type MarketProduct = components["schemas"]["MarketProductOut"];
 export interface MarketProductQuery {
   available?: boolean | null;
   cask_family?: string[];
+  cask_type?: string[];
+  cask_material?: string[];
   country?: string[];
   region?: string[];
   distillery_id?: number[];
@@ -54,8 +56,12 @@ export interface RangeFacet {
 }
 
 export interface MarketFacets {
+  /** 선택된 주종에 의미 있는 축 목록(DECISIONS 035) — 여기 없는 패널은 숨긴다. */
+  axes: string[];
   total: number;
   cask_family: FacetCount[];
+  cask_type: FacetCount[];
+  cask_material: FacetCount[];
   country: FacetCount[];
   region: FacetCount[];
   spirit_type: FacetCount[];
@@ -77,16 +83,17 @@ function appendValues(
   }
 }
 
-export async function listMarketProducts(
-  marketCode: string,
-  query: MarketProductQuery = {},
-  signal?: AbortSignal,
-): Promise<MarketProduct[]> {
-  const params = new URLSearchParams();
+/** 목록·패싯 공용 필터 파라미터 — 패싯도 교차 좁힘(DECISIONS 035)으로 같은 필터를 받는다. */
+function appendProductFilterParams(
+  params: URLSearchParams,
+  query: MarketProductQuery,
+) {
   if (query.available !== undefined && query.available !== null) {
     params.set("available", String(query.available));
   }
   appendValues(params, "cask_family", query.cask_family);
+  appendValues(params, "cask_type", query.cask_type);
+  appendValues(params, "cask_material", query.cask_material);
   appendValues(params, "country", query.country);
   appendValues(params, "region", query.region);
   appendValues(params, "distillery_id", query.distillery_id);
@@ -111,6 +118,15 @@ export async function listMarketProducts(
   if (query.limited !== undefined && query.limited !== null) {
     params.set("limited", String(query.limited));
   }
+}
+
+export async function listMarketProducts(
+  marketCode: string,
+  query: MarketProductQuery = {},
+  signal?: AbortSignal,
+): Promise<MarketProduct[]> {
+  const params = new URLSearchParams();
+  appendProductFilterParams(params, query);
   if (query.limit !== undefined) params.set("limit", String(query.limit));
   if (query.offset !== undefined) params.set("offset", String(query.offset));
 
@@ -125,13 +141,11 @@ export async function listMarketProducts(
 
 export async function getMarketFacets(
   marketCode: string,
-  query: Pick<MarketProductQuery, "available"> = {},
+  query: MarketProductQuery = {},
   signal?: AbortSignal,
 ): Promise<MarketFacets> {
   const params = new URLSearchParams();
-  if (query.available !== undefined && query.available !== null) {
-    params.set("available", String(query.available));
-  }
+  appendProductFilterParams(params, query);
   const qs = params.toString();
   const res = await fetch(
     `${API_BASE_URL}/api/markets/${encodeURIComponent(marketCode)}/facets${qs ? `?${qs}` : ""}`,
@@ -156,13 +170,6 @@ export function formatLocalPrice(
   });
   // 기호가 있으면 "£82.51", 없으면 코드 폴백 "TWD 1,200".
   return symbol ? `${symbol}${num}` : `${currency} ${num}`;
-}
-
-/** 공식 병입은 기본값이라 이름에 노출하지 않는다 — 독립병입자명만 그대로 둔다. */
-export function displayKoreanName(name: string | null | undefined): string | null {
-  if (!name) return null;
-  const stripped = name.replace(/^공식 병입\s*/, "").trim();
-  return stripped || name;
 }
 
 // 무카와(Color Me Shop)는 크롤 데이터에 이미지 URL이 없지만, 상품 이미지가

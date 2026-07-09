@@ -10,7 +10,6 @@ import {
   type ProductOffer,
 } from "../../lib/catalog";
 import {
-  displayKoreanName,
   formatLocalPrice,
   productImageCandidates,
 } from "../../lib/products";
@@ -136,7 +135,7 @@ function CatalogCard({
   selectedMarkets: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
-  const koreanName = displayKoreanName(p.product_name_korean);
+  const koreanName = p.product_name_korean;
   const representative = p.min_direct_price_krw ?? p.min_local_price_krw;
   const visibleOffers = expanded ? p.offers : p.offers.slice(0, 4);
 
@@ -239,28 +238,31 @@ export default function CatalogPage() {
   const load = useCallback(
     (signal?: AbortSignal) => {
       setStatus("loading");
+      // 목록·패싯이 같은 필터를 받는다 — 패싯 카운트가 현재 선택으로 교차
+      // 좁혀지고(DECISIONS 035), total이 결과 건수 헤더가 된다.
+      const query = {
+        available: availableOnly ? true : null,
+        market: filters.market,
+        search: search || null,
+        cask_family: filters.cask_family,
+        cask_type: filters.cask_type,
+        cask_material: filters.cask_material,
+        country: filters.country,
+        region: filters.region,
+        distillery_id: filters.distillery_id,
+        bottling: filters.bottling,
+        spirit_type: filters.spirit_type,
+        peated: filters.peated,
+        age_min: numberOrNull(filters.age_min),
+        age_max: numberOrNull(filters.age_max),
+        abv_min: numberOrNull(filters.abv_min),
+        abv_max: numberOrNull(filters.abv_max),
+        volume_ml: filters.volume_ml,
+      } as const;
       Promise.all([
-        getCatalogFacets({ available: availableOnly ? true : null }, signal),
+        getCatalogFacets(query, signal),
         listCatalogProducts(
-          {
-            available: availableOnly ? true : null,
-            market: filters.market,
-            search: search || null,
-            cask_family: filters.cask_family,
-            country: filters.country,
-            region: filters.region,
-            distillery_id: filters.distillery_id,
-            bottling: filters.bottling,
-            spirit_type: filters.spirit_type,
-            peated: filters.peated,
-            age_min: numberOrNull(filters.age_min),
-            age_max: numberOrNull(filters.age_max),
-            abv_min: numberOrNull(filters.abv_min),
-            abv_max: numberOrNull(filters.abv_max),
-            volume_ml: filters.volume_ml,
-            limit: PAGE_SIZE,
-            offset,
-          },
+          { ...query, sort: "price", limit: PAGE_SIZE, offset },
           signal,
         ),
       ])
@@ -405,6 +407,7 @@ export default function CatalogPage() {
 
           <div className="mt-4 flex items-center justify-between text-sm">
             <span className="text-gray-500 dark:text-gray-400">
+              {facets != null && `총 ${facets.total.toLocaleString("ko-KR")}개 · `}
               {page}페이지 · {products.length}건 표시
             </span>
             <div className="flex gap-2">

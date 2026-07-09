@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAuthed } from "../../../lib/auth";
 import { listPublicMarkets, type PublicMarket } from "../../../lib/markets";
 import {
-  displayKoreanName,
   formatDateTime,
   formatLocalPrice,
   getMarketFacets,
@@ -122,7 +121,7 @@ function productNameParts(p: MarketProduct): {
   title: string;
   subtitle: string | null;
 } {
-  const korean = displayKoreanName(p.product_name_korean);
+  const korean = p.product_name_korean;
   if (korean) {
     return {
       title: korean,
@@ -273,32 +272,31 @@ export default function MarketProductsPage() {
   const load = useCallback(
     (signal?: AbortSignal) => {
       setStatus("loading");
+      // 목록·패싯이 같은 필터를 받는다 — 패싯 카운트가 현재 선택으로 교차
+      // 좁혀지고(DECISIONS 035), total이 결과 건수 헤더가 된다.
+      const query = {
+        available: availableOnly ? true : null,
+        cask_family: filters.cask_family,
+        cask_type: filters.cask_type,
+        cask_material: filters.cask_material,
+        country: filters.country,
+        region: filters.region,
+        distillery_id: filters.distillery_id,
+        bottling: filters.bottling,
+        spirit_type: filters.spirit_type,
+        peated: filters.peated,
+        age_min: numberOrNull(filters.age_min),
+        age_max: numberOrNull(filters.age_max),
+        abv_min: numberOrNull(filters.abv_min),
+        abv_max: numberOrNull(filters.abv_max),
+        volume_ml: filters.volume_ml,
+      } as const;
       Promise.all([
         listPublicMarkets(signal),
-        getMarketFacets(
-          marketCode,
-          { available: availableOnly ? true : null },
-          signal,
-        ),
+        getMarketFacets(marketCode, query, signal),
         listMarketProducts(
           marketCode,
-          {
-            available: availableOnly ? true : null,
-            cask_family: filters.cask_family,
-            country: filters.country,
-            region: filters.region,
-            distillery_id: filters.distillery_id,
-            bottling: filters.bottling,
-            spirit_type: filters.spirit_type,
-            peated: filters.peated,
-            age_min: numberOrNull(filters.age_min),
-            age_max: numberOrNull(filters.age_max),
-            abv_min: numberOrNull(filters.abv_min),
-            abv_max: numberOrNull(filters.abv_max),
-            volume_ml: filters.volume_ml,
-            limit: PAGE_SIZE,
-            offset,
-          },
+          { ...query, limit: PAGE_SIZE, offset },
           signal,
         ),
       ])
@@ -636,6 +634,7 @@ export default function MarketProductsPage() {
         <>
           <div className="mt-4 flex items-center justify-between text-sm">
             <span className="text-gray-500 dark:text-gray-400">
+              {facets != null && `총 ${facets.total.toLocaleString("ko-KR")}개 · `}
               {page}페이지 · {searched.length}건 표시
             </span>
             <div className="flex gap-2">
