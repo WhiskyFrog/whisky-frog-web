@@ -26,6 +26,11 @@ type Status = "loading" | "error" | "ready";
 
 const PAGE_SIZE = 50;
 const SEARCH_DEBOUNCE_MS = 350;
+// 백엔드 search(ILIKE)는 정본 영문명·마켓 원문만 보고 한국어명은 못 본다 — 한글 검색은
+// 전체를 최대 limit으로 받아 클라이언트에서 거른다(현재 카탈로그 271개 < 500).
+// 카탈로그가 이 수를 넘으면 서버 검색의 한국어명 지원이 필요하다(핸드오프 회신 참조).
+const KOREAN_RE = /[ㄱ-ㅎㅏ-ㅣ가-힣]/;
+const CLIENT_SEARCH_LIMIT = 500;
 
 function AttributeBadges({ product: p }: { product: CatalogProduct }) {
   const badges: string[] = [];
@@ -217,6 +222,8 @@ export default function CatalogPage() {
   const [status, setStatus] = useState<Status>("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [products, setProducts] = useState<CatalogProduct[]>([]);
+  // 한글 검색(클라이언트 필터링) 시의 매칭 건수 — 서버 검색이면 null(facets.total 사용).
+  const [matchedTotal, setMatchedTotal] = useState<number | null>(null);
   const [facets, setFacets] = useState<CatalogFacets | null>(null);
   const [offset, setOffset] = useState(0);
   const [availableOnly, setAvailableOnly] = useState(true);
@@ -240,10 +247,11 @@ export default function CatalogPage() {
       setStatus("loading");
       // 목록·패싯이 같은 필터를 받는다 — 패싯 카운트가 현재 선택으로 교차
       // 좁혀지고(DECISIONS 035), total이 결과 건수 헤더가 된다.
+      const koreanSearch = KOREAN_RE.test(search);
       const query = {
         available: availableOnly ? true : null,
         market: filters.market,
-        search: search || null,
+        search: koreanSearch ? null : search || null,
         cask_family: filters.cask_family,
         cask_type: filters.cask_type,
         cask_material: filters.cask_material,
@@ -262,13 +270,27 @@ export default function CatalogPage() {
       Promise.all([
         getCatalogFacets(query, signal),
         listCatalogProducts(
-          { ...query, sort: "price", limit: PAGE_SIZE, offset },
+          koreanSearch
+            ? { ...query, sort: "price", limit: CLIENT_SEARCH_LIMIT }
+            : { ...query, sort: "price", limit: PAGE_SIZE, offset },
           signal,
         ),
       ])
         .then(([facetData, productRows]) => {
           setFacets(facetData);
-          setProducts(productRows);
+          if (koreanSearch) {
+            const q = search.toLowerCase();
+            const matched = productRows.filter((p) =>
+              [p.product_name, p.product_name_korean].some(
+                (s) => s && s.toLowerCase().includes(q),
+              ),
+            );
+            setMatchedTotal(matched.length);
+            setProducts(matched.slice(offset, offset + PAGE_SIZE));
+          } else {
+            setMatchedTotal(null);
+            setProducts(productRows);
+          }
           setStatus("ready");
         })
         .catch((err: unknown) => {
@@ -309,7 +331,12 @@ export default function CatalogPage() {
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
   const hasPrev = offset > 0;
-  const hasNext = products.length === PAGE_SIZE;
+  const hasNext =
+    matchedTotal != null
+      ? offset + PAGE_SIZE < matchedTotal
+      : products.length === PAGE_SIZE;
+  // 한글 검색은 facets가 검색어를 모른 채 집계되므로 매칭 건수를 총계로 쓴다.
+  const totalCount = matchedTotal ?? facets?.total ?? null;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -354,7 +381,7 @@ export default function CatalogPage() {
           type="search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="상품명 검색 (정본명·마켓 원문 제목)"
+          placeholder="상품명 검색 (한국어·영문·원문)"
           className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-700 dark:bg-gray-950 sm:max-w-md"
         />
       </div>
@@ -407,7 +434,7 @@ export default function CatalogPage() {
 
           <div className="mt-4 flex items-center justify-between text-sm">
             <span className="text-gray-500 dark:text-gray-400">
-              {facets != null && `총 ${facets.total.toLocaleString("ko-KR")}개 · `}
+              {totalCount != null && `총 ${totalCount.toLocaleString("ko-KR")}개 · `}
               {page}페이지 · {products.length}건 표시
             </span>
             <div className="flex gap-2">

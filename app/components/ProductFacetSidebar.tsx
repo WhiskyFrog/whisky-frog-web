@@ -379,39 +379,26 @@ export function ProductFacetSidebar({
                 />
               )}
 
-              {((facets.country.length > 0 && axisOn("country")) ||
-                (facets.region.length > 0 && axisOn("region"))) && (
-                <FacetSection
+              {/* 국가·지역은 별개 축 — 한 리스트에 섞으면 Scotland와 Speyside가 같은
+                  레벨로 보인다(Speyside ⊂ Scotland). region은 사실상 스카치 하위 지역. */}
+              {facets.country.length > 0 && axisOn("country") && (
+                <CheckboxFacetSection
+                  title="국가"
+                  options={facets.country}
+                  selected={filters.country}
+                  labelOf={countLabel}
+                  onToggle={toggleOf("country")}
+                />
+              )}
+
+              {facets.region.length > 0 && axisOn("region") && (
+                <CheckboxFacetSection
                   title="지역"
-                  selected={filters.country.length + filters.region.length}
-                >
-                  {axisOn("country") &&
-                    facets.country.map((f) => {
-                      const value = String(f.value);
-                      return (
-                        <FacetOption
-                          key={`country-${value}`}
-                          checked={filters.country.includes(value)}
-                          label={countLabel(f)}
-                          count={f.count}
-                          onChange={() => toggleOf("country")(value)}
-                        />
-                      );
-                    })}
-                  {axisOn("region") &&
-                    facets.region.map((f) => {
-                      const value = String(f.value);
-                      return (
-                        <FacetOption
-                          key={value}
-                          checked={filters.region.includes(value)}
-                          label={countLabel(f)}
-                          count={f.count}
-                          onChange={() => toggleOf("region")(value)}
-                        />
-                      );
-                    })}
-                </FacetSection>
+                  options={facets.region}
+                  selected={filters.region}
+                  labelOf={countLabel}
+                  onToggle={toggleOf("region")}
+                />
               )}
 
               {facets.distillery.length > 0 && axisOn("distillery") && (
