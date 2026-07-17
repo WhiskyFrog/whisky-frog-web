@@ -14,6 +14,7 @@ import {
   productImageCandidates,
 } from "../../lib/products";
 import { ProductThumb } from "../../components/ProductThumb";
+import { PriceHistorySection } from "../../components/PriceHistorySection";
 import { formatKrw } from "../../lib/directPrice";
 import {
   EMPTY_FILTERS,
@@ -140,6 +141,7 @@ function CatalogCard({
   selectedMarkets: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const koreanName = p.product_name_korean;
   const representative = p.min_direct_price_krw ?? p.min_local_price_krw;
   const visibleOffers = expanded ? p.offers : p.offers.slice(0, 4);
@@ -213,6 +215,20 @@ function CatalogCard({
         >
           {expanded ? "접기" : `오퍼 ${p.offers.length - 4}개 더 보기`}
         </button>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setShowHistory((v) => !v)}
+        className="mt-1.5 w-full rounded border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
+        aria-expanded={showHistory}
+      >
+        {showHistory ? "가격 추이 접기" : "가격 추이 보기"}
+      </button>
+      {showHistory && (
+        <div className="mt-1.5 border-t border-gray-100 pt-2 dark:border-gray-800">
+          <PriceHistorySection productId={p.product_id} />
+        </div>
       )}
     </article>
   );

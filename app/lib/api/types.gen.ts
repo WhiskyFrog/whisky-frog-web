@@ -124,6 +124,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/products/{product_id}/price-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 상품의 마켓별 현지 가격 이력 조회
+         * @description 저장된 현지통화 원가를 최신순으로 반환한다.
+         *
+         *     정렬은 `crawled_at DESC, price_history.id DESC`로 고정해 같은 시각의 행도
+         *     결정적으로 페이지네이션한다. 직구가·원화환산은 현재 환율/정책에 따라 달라지므로
+         *     이 시계열에 섞지 않는다.
+         */
+        get: operations["get_product_price_history_api_products__product_id__price_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/direct-price/estimate": {
         parameters: {
             query?: never;
@@ -999,6 +1023,10 @@ export interface paths {
         /**
          * Delete Product
          * @description 제품 삭제. 마켓 URL 매칭은 끊고 보존(SET NULL), 캐스크 구성·별칭은 함께 삭제.
+         *
+         *     FK는 SET NULL만 하므로 matched 상태의 URL은 그대로 두면 product_id는 비었는데
+         *     match_status='matched'로 남는 무효 상태가 된다(⑤ pending 선택 쿼리에서 영구 제외
+         *     → 재매칭 불가). 같은 트랜잭션에서 matched 행만 pending으로 되돌려 재매칭 가능하게 한다.
          */
         delete: operations["delete_product_api_admin_whisky_products__product_id__delete"];
         options?: never;
@@ -2061,6 +2089,33 @@ export interface components {
             scope: "market" | "global";
         };
         /**
+         * PriceHistoryItemOut
+         * @description 상품의 마켓별 원가 이력 한 행.
+         *
+         *     `local_price`는 저장된 현지통화 원가 그대로이며 환율·세금·배송비를 적용하지 않는다.
+         */
+        PriceHistoryItemOut: {
+            /** Price History Id */
+            price_history_id: number;
+            /** Product Url Id */
+            product_url_id: number;
+            /** Market Code */
+            market_code: string;
+            /** Market Name */
+            market_name: string;
+            /** Local Price */
+            local_price: string;
+            /** Currency */
+            currency: string;
+            /** Available */
+            available: boolean;
+            /**
+             * Crawled At
+             * Format: date-time
+             */
+            crawled_at: string;
+        };
+        /**
          * ProcessingRunIn
          * @description 가공·분류 트리거 옵션. `limit`로 이번 런에 처리할 product_url 수를 제한(스모크).
          */
@@ -2335,6 +2390,24 @@ export interface components {
             shipping_krw?: number | null;
             /** Exchange Rate */
             exchange_rate?: string | null;
+        };
+        /**
+         * ProductPriceHistoryOut
+         * @description 최신순 가격 이력 페이지.
+         */
+        ProductPriceHistoryOut: {
+            /** Product Id */
+            product_id: number;
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Next Offset */
+            next_offset: number | null;
+            /** Items */
+            items: components["schemas"]["PriceHistoryItemOut"][];
         };
         /**
          * ProductTaxonomyPatchIn
@@ -2826,6 +2899,8 @@ export interface operations {
             query?: {
                 /** @description 최신 가격 이력의 판매가능 여부. 생략 기본값은 true. */
                 available?: boolean | null;
+                /** @description 상품 정본명 · 마켓 원문 제목 · 한글명(product_name_korean 동등) ILIKE 부분일치. */
+                search?: string | null;
                 /** @description 캐스크 상위분류(sherry/bourbon/wine…/other). 'unknown'=미분류. 여러 값=OR. */
                 cask_family?: string[] | null;
                 /** @description 캐스크 하위 표준명(Oloroso/PX…) 정확일치. 여러 값=OR. */
@@ -2892,6 +2967,7 @@ export interface operations {
             query?: {
                 /** @description 판매가능 매물만 집계(목록 기본과 동일). 생략 기본 true. */
                 available?: boolean | null;
+                search?: string | null;
                 /** @description 목록과 동일 — 교차 좁힘용. */
                 cask_family?: string[] | null;
                 cask_type?: string[] | null;
@@ -2945,7 +3021,7 @@ export interface operations {
                 available?: boolean | null;
                 /** @description 마켓 code 필터. 여러 값=OR. **상품 선정에만** 적용(오퍼는 전 마켓 노출). */
                 market?: string[] | null;
-                /** @description 상품 정본명 또는 마켓 원문 제목 ILIKE 부분일치. */
+                /** @description 상품 정본명 · 마켓 원문 제목 · 한글명(product_name_korean 동등) ILIKE 부분일치. */
                 search?: string | null;
                 /** @description 정렬. name=정본명 가나다 / price=**근사** 원화가 오름차순(최저 현지가×현재 주차 환율 — 세금·배송 미포함이라 직구가 순위와 드물게 다를 수 있음). 환율 미수집 통화 매물뿐인 상품은 뒤로. */
                 sort?: string;
@@ -3043,6 +3119,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CatalogFacetsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_product_price_history_api_products__product_id__price_history_get: {
+        parameters: {
+            query?: {
+                /** @description 활성 마켓 code 필터. 여러 값=OR. 생략하면 모든 활성 마켓. */
+                market?: string[] | null;
+                /** @description 페이지 크기(최대 100). */
+                limit?: number;
+                /** @description 건너뛸 이력 행 수. */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductPriceHistoryOut"];
                 };
             };
             /** @description Validation Error */
