@@ -6,8 +6,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAuthed } from "../../../lib/auth";
 import { listPublicMarkets, type PublicMarket } from "../../../lib/markets";
 import {
-  displayProductKorean,
-  distilleryNameMap,
   formatDateTime,
   formatLocalPrice,
   getMarketFacets,
@@ -119,14 +117,11 @@ function MarketPriceBlock({
 }
 
 /** 한국어명 우선 제목 — 한국어명이 있으면 정본 영문명을, 없으면 마켓 원문 제목을 부제로 쓴다. */
-function productNameParts(
-  p: MarketProduct,
-  distilleryNames: ReadonlyMap<string, string>,
-): {
+function productNameParts(p: MarketProduct): {
   title: string;
   subtitle: string | null;
 } {
-  const korean = displayProductKorean(p, distilleryNames);
+  const korean = p.product_name_korean;
   if (korean) {
     return {
       title: korean,
@@ -160,15 +155,13 @@ function ProductCard({
   market,
   marketCode,
   canEdit,
-  distilleryNames,
 }: {
   product: MarketProduct;
   market: PublicMarket | undefined;
   marketCode: string;
   canEdit: boolean;
-  distilleryNames: ReadonlyMap<string, string>;
 }) {
-  const { title: productTitle, subtitle } = productNameParts(p, distilleryNames);
+  const { title: productTitle, subtitle } = productNameParts(p);
   return (
     <article className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <ProductThumb
@@ -365,9 +358,6 @@ export default function MarketProductsPage() {
     [],
   );
 
-  // 에디션 손실 한글명 판별용 — 패싯 증류소 트리에서 한글명→영문명.
-  const distilleryNames = useMemo(() => distilleryNameMap(facets), [facets]);
-
   // 상품 검색 — 백엔드 마켓 엔드포인트에 search 파라미터가 없어 로드된 페이지에서
   // 클라이언트 필터링한다(마켓당 상품 수가 페이지 크기 수준이라 사실상 전체 검색).
   // 정본 영문명·마켓 원문 제목·한국어명 모두 부분일치.
@@ -470,7 +460,6 @@ export default function MarketProductsPage() {
               market={market}
               marketCode={marketCode}
               canEdit={canEditProducts}
-              distilleryNames={distilleryNames}
             />
           ))}
         </div>
@@ -480,10 +469,7 @@ export default function MarketProductsPage() {
         <>
           <div className="space-y-3 sm:hidden">
             {searched.map((p) => {
-              const { title: productTitle, subtitle } = productNameParts(
-                p,
-                distilleryNames,
-              );
+              const { title: productTitle, subtitle } = productNameParts(p);
               return (
               <article
                 key={p.product_url_id}
@@ -573,10 +559,8 @@ export default function MarketProductsPage() {
               </thead>
               <tbody>
                 {searched.map((p) => {
-                  const { title: productTitle, subtitle } = productNameParts(
-                    p,
-                    distilleryNames,
-                  );
+                  const { title: productTitle, subtitle } =
+                    productNameParts(p);
                   return (
                   <tr
                     key={p.product_url_id}

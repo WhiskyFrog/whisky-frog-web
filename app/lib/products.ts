@@ -155,61 +155,6 @@ export async function getMarketFacets(
   return (await res.json()) as MarketFacets;
 }
 
-/** 패싯 증류소 트리 → 한글명→영문명 매핑. displayProductKorean의 에디션 손실 판별용. */
-export function distilleryNameMap(
-  facets: MarketFacets | null,
-): ReadonlyMap<string, string> {
-  const map = new Map<string, string>();
-  for (const countryGroup of facets?.distillery ?? []) {
-    for (const regionGroup of countryGroup.regions) {
-      for (const d of regionGroup.distilleries) {
-        if (d.korean) map.set(d.korean, d.name);
-      }
-    }
-  }
-  return map;
-}
-
-// 조합 한국어명이 에디션 전사를 못 해 "증류소명(+숙성)"만 남는 경우가 있다
-// (Ardbeg Corryvreckan → "아드벡"). 그대로 제목으로 쓰면 같은 이름이 여럿 나란히
-// 서서 구별이 안 되므로 영문 정본명으로 폴백한다. 에디션 한글 전사는 백엔드
-// product_name_korean 조합 몫(핸드오프 회신 참조) — 지원되면 이 판별은 걷어낸다.
-const AGE_OR_FILLER_RE = /^(\d+|year|years|yo|old|whisky|whiskey)$/i;
-
-/** 표시용 한국어명 — 에디션을 잃어 상품 구별이 안 되는 한글명이면 null(영문 폴백). */
-export function displayProductKorean(
-  p: {
-    product_name: string;
-    product_name_korean?: string | null;
-    distillery_korean?: string | null;
-    age_years?: number | null;
-  },
-  distilleryNames: ReadonlyMap<string, string>,
-): string | null {
-  const korean = p.product_name_korean ?? null;
-  const distillery = p.distillery_korean;
-  if (!korean || !distillery) return korean;
-  const bare =
-    korean === distillery ||
-    (p.age_years != null && korean === `${distillery} ${p.age_years}년`);
-  if (!bare) return korean;
-  const distilleryName = distilleryNames.get(distillery);
-  if (!distilleryName) return korean;
-  // 영문 정본명이 증류소명으로 시작하지 않으면 별도 브랜드(Port Charlotte 등) —
-  // 증류소 한글명만으로는 오도라 영문 폴백.
-  const name = p.product_name.trim();
-  if (!name.toLowerCase().startsWith(distilleryName.toLowerCase())) return null;
-  // 증류소명 뒤에 숙성 표기·whisky 외의 단어가 남으면 에디션이 잘린 것.
-  const rest = name
-    .slice(distilleryName.length)
-    .split(/\s+/)
-    .filter((w) => {
-      const word = w.replace(/[^a-z0-9]/gi, "");
-      return word !== "" && !AGE_OR_FILLER_RE.test(word);
-    });
-  return rest.length > 0 ? null : korean;
-}
-
 export function formatLocalPrice(
   value: number | string,
   currency: string,
