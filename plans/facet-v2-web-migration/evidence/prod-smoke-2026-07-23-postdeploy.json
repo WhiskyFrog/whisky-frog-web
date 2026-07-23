@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-07-23T06:05:05.525Z",
+  "pass": true,
+  "total": 13,
+  "failed": 0,
+  "results": [
+    {
+      "check": "required arguments present",
+      "status": "pass",
+      "detail": "frontend/backend base URLs and market code provided."
+    },
+    {
+      "check": "deployed OpenAPI document reachable",
+      "status": "pass",
+      "detail": "GET https://whisky-frog.vercel.app/backend-api/openapi.json → HTTP 200"
+    },
+    {
+      "check": "OpenAPI exposes catalogV2 (/api/v2/products/facets)",
+      "status": "pass",
+      "detail": "operationId \"catalog_facets_v2_api_v2_products_facets_get\" matches the generated contract."
+    },
+    {
+      "check": "OpenAPI exposes marketV2 (/api/v2/markets/{market_code}/facets)",
+      "status": "pass",
+      "detail": "operationId \"market_facets_v2_api_v2_markets__market_code__facets_get\" matches the generated contract."
+    },
+    {
+      "check": "OpenAPI exposes catalogLegacy (/api/products/facets)",
+      "status": "pass",
+      "detail": "operationId \"catalog_facets_api_products_facets_get\" matches the generated contract."
+    },
+    {
+      "check": "OpenAPI exposes marketLegacy (/api/markets/{market_code}/facets)",
+      "status": "pass",
+      "detail": "operationId \"market_facets_api_markets__market_code__facets_get\" matches the generated contract."
+    },
+    {
+      "check": "OpenAPI declares discriminator schema CatalogTermsFacetGroupV2",
+      "status": "pass",
+      "detail": "present in components.schemas."
+    },
+    {
+      "check": "OpenAPI declares discriminator schema MarketTermsFacetGroupV2",
+      "status": "pass",
+      "detail": "present in components.schemas."
+    },
+    {
+      "check": "OpenAPI declares discriminator schema RangeFacetGroupV2",
+      "status": "pass",
+      "detail": "present in components.schemas."
+    },
+    {
+      "check": "catalog v2 list/facet pair responds",
+      "status": "pass",
+      "detail": "facets.count_unit=\"product\", facets.total=298, list is an array of 100."
+    },
+    {
+      "check": "market v2 list/facet pair responds",
+      "status": "pass",
+      "detail": "facets.count_unit=\"offer\", facets.total=124, list is an array of 100."
+    },
+    {
+      "check": "catalog page is reachable (GET, no auth)",
+      "status": "pass",
+      "detail": "GET https://whisky-frog.vercel.app/products → HTTP 200, content-type \"text/html; charset=utf-8\". Deep control interaction is proven separately by the browser-level smoke suite; this check only proves the deployed route responds with an HTML document."
+    },
+    {
+      "check": "per-market page is reachable (GET, no auth)",
+      "status": "pass",
+      "detail": "GET https://whisky-frog.vercel.app/markets/wp → HTTP 200, content-type \"text/html; charset=utf-8\". Deep control interaction is proven separately by the browser-level smoke suite; this check only proves the deployed route responds with an HTML document."
+    }
+  ]
+}
