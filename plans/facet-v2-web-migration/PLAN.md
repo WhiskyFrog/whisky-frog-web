@@ -159,21 +159,21 @@ after the evidence exists.
 
 ## Execution Order
 
-1. P-01 establishes the deployed v2 contract, current-flow inventory, fixtures,
+1. task-0002 establishes the deployed v2 contract, current-flow inventory, fixtures,
    and automated test foundation; any absent or incompatible v2 route blocks
    conversion without modifying the backend.
-2. P-02 builds the canonical URL/query serializer and the explicit v2/legacy
+2. task-0003 builds the canonical URL/query serializer and the explicit v2/legacy
    client seam on the generated contract, so both pages can share exact
    request semantics and a recoverable route choice.
-3. P-03 builds and verifies the discriminator-driven renderer and selection
+3. task-0004 builds and verifies the discriminator-driven renderer and selection
    preservation/accessibility behavior against the structured fixtures,
    independently of page fetching.
-4. P-04 moves the catalog scope onto the shared v2 seam and renderer while
+4. task-0005 moves the catalog scope onto the shared v2 seam and renderer while
    proving distinct-product counts, search/availability/pagination behavior,
    complete offers, and the unchanged lazy price-history card.
-5. P-05 moves the per-market scope onto the same seam while proving offer
+5. task-0006 moves the per-market scope onto the same seam while proving offer
    counts, market-specific search, availability, pagination, and responsive
    card/table behavior.
-6. P-06 runs the joined contract, serialization, component, build, and
+6. task-0007 runs the joined contract, serialization, component, build, and
    production smoke matrix, drills the legacy fallback as a whole-stack mode,
    and records the separate approval criteria for eventual legacy removal.

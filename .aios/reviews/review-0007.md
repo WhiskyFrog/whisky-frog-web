@@ -1,0 +1,14 @@
+---
+schema: aios.review/v1
+id: review-0007
+project: whisky-frog-web
+task: task-0006
+attempt: 1
+verdict: pass
+---
+
+# Review of task-0006, Attempt 1
+
+## Findings
+
+Verified against the actual repository (not just the attempt's summary): (1) app/lib/useMarketQuery.ts faithfully mirrors app/lib/useCatalogQuery.ts (bootstrap-then-swap metadata, offset-reset-only-on-criterion-change, resetFacets scope) with market-scoped defaults (MARKET_PAGE_SIZE=100, no sort). (2) app/lib/api/product-query.ts's createProductQueryClient already generically supports {kind:'market'} via one shared client seam (built in an earlier approved task), routing to the generated per-market v2/legacy list+facet operations with percent-encoded market_code and byte-identical common-filter serialization between list/facet requests. (3) app/components/MarketView.tsx reuses the same generic ProductFacetPanel (v2) / ProductFacetSidebar (legacy) components used by the catalog — no per-market discriminator/domain copy — and diffing the removed old page.tsx confirms all presentation logic (shouldShowDirectPrice, imageRich 0.5 threshold, taxonomyEditHref, price blocks) was carried over verbatim, not altered. (4) The v2/legacy facet total is now correctly surfaced as an offer count ('N개 오퍼'), backed by the generated contract's own `count_unit: "offer"` field on MarketFacetResponseV2 — previously this reused the sidebar's hardcoded '상품' label, which was a real mislabeling bug this task fixes. (5) The generated OpenAPI operations confirm both list and facet market endpoints document the same `search` parameter (canonical/Korean/raw-name ILIKE), matching the attempt's claim of true server-side search parity rather than a local-search workaround. (6) tests/use-market-query.test.tsx and tests/market-page.test.tsx substantively cover market-code encoding, version non-mixing, parity (including explicit-false/zero/peated_state/edition_state/ranges), available-only+facet retention, reset scope, pagination boundaries (first/middle/full-more/exact-full/empty), error/retry with selections intact, image-rich vs. mobile+table rendering with authenticated edit links, and Korean-title priority. (7) Constraint compliance verified via file mtimes: catalog files (products/page.tsx, catalog.ts, useCatalogQuery.ts, CatalogView.tsx) all predate the market-file changes by ~4.7 hours and match task-0005's already-approved review-0006 state — this attempt did not touch them. ProductFacetSidebar.tsx's diff is a strictly additive, default-preserving 2-line prop (resultNoun) that doesn't affect the catalog's default text/tests. No PriceHistorySection import in MarketView.tsx (constraint respected). (8) Independently reran verification: npm test → 91/91 pass, npx tsc --noEmit → clean, npm run build → succeeds with all 12 routes including dynamic /markets/[code]. Nothing under .aios/ was created/modified by this review. No blocking defects found.

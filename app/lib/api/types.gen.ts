@@ -148,6 +148,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/markets/{market_code}/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Market Facets V2 */
+        get: operations["market_facets_v2_api_v2_markets__market_code__facets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/products/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog Facets V2 */
+        get: operations["catalog_facets_v2_api_v2_products_facets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/direct-price/estimate": {
         parameters: {
             query?: never;
@@ -1340,6 +1374,28 @@ export interface components {
              */
             alias_count: number;
         };
+        /** CatalogFacetResponseV2 */
+        CatalogFacetResponseV2: {
+            /**
+             * Version
+             * @constant
+             */
+            version: "2";
+            /** Total */
+            total: number;
+            /**
+             * Count Unit
+             * @constant
+             */
+            count_unit: "product";
+            /**
+             * Count Mode
+             * @constant
+             */
+            count_mode: "disjunctive";
+            /** Groups */
+            groups: (components["schemas"]["CatalogTermsFacetGroupV2"] | components["schemas"]["RangeFacetGroupV2"])[];
+        };
         /**
          * CatalogFacetsOut
          * @description 전 마켓 통합 패싯 — 카운트는 **상품(distinct product) 단위** + `market` 축 포함.
@@ -1429,6 +1485,33 @@ export interface components {
             min_local_price_krw?: number | null;
             /** Offers */
             offers: components["schemas"]["ProductOfferOut"][];
+        };
+        /** CatalogTermsFacetGroupV2 */
+        CatalogTermsFacetGroupV2: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "terms";
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "market" | "spirit_type" | "cask_family" | "cask_type" | "cask_material" | "country" | "region" | "distillery" | "bottling" | "peated" | "volume_ml" | "limited";
+            /** Label */
+            label: string;
+            /** Relevant */
+            relevant: boolean;
+            query: components["schemas"]["TermsQueryV2"];
+            /**
+             * Selection Mode
+             * @enum {string}
+             */
+            selection_mode: "single" | "multiple";
+            /** Selected */
+            selected: (string | number)[];
+            /** Options */
+            options: components["schemas"]["FacetOptionV2"][];
         };
         /** ClassifierNoteIn */
         ClassifierNoteIn: {
@@ -1712,6 +1795,31 @@ export interface components {
             /** Korean */
             korean?: string | null;
         };
+        /** FacetOptionV2 */
+        FacetOptionV2: {
+            /** Value */
+            value: string | number;
+            /** Label */
+            label: string;
+            /** Count */
+            count: number;
+            /** Selected */
+            selected: boolean;
+            /** Parents */
+            parents?: components["schemas"]["FacetParentV2"][];
+        };
+        /** FacetParentV2 */
+        FacetParentV2: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "country" | "region";
+            /** Value */
+            value: string;
+            /** Label */
+            label: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1732,6 +1840,28 @@ export interface components {
             username: string;
             /** Password */
             password: string;
+        };
+        /** MarketFacetResponseV2 */
+        MarketFacetResponseV2: {
+            /**
+             * Version
+             * @constant
+             */
+            version: "2";
+            /** Total */
+            total: number;
+            /**
+             * Count Unit
+             * @constant
+             */
+            count_unit: "offer";
+            /**
+             * Count Mode
+             * @constant
+             */
+            count_mode: "disjunctive";
+            /** Groups */
+            groups: (components["schemas"]["MarketTermsFacetGroupV2"] | components["schemas"]["RangeFacetGroupV2"])[];
         };
         /**
          * MarketFacetsOut
@@ -2003,6 +2133,33 @@ export interface components {
             domain: string;
             /** Base Url */
             base_url: string | null;
+        };
+        /** MarketTermsFacetGroupV2 */
+        MarketTermsFacetGroupV2: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "terms";
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "spirit_type" | "cask_family" | "cask_type" | "cask_material" | "country" | "region" | "distillery" | "bottling" | "peated" | "volume_ml" | "limited";
+            /** Label */
+            label: string;
+            /** Relevant */
+            relevant: boolean;
+            query: components["schemas"]["TermsQueryV2"];
+            /**
+             * Selection Mode
+             * @enum {string}
+             */
+            selection_mode: "single" | "multiple";
+            /** Selected */
+            selected: (string | number)[];
+            /** Options */
+            options: components["schemas"]["FacetOptionV2"][];
         };
         /**
          * MarketWithPipelineOut
@@ -2520,6 +2677,13 @@ export interface components {
             /** Length */
             length?: number | null;
         };
+        /** RangeBoundsV2 */
+        RangeBoundsV2: {
+            /** Min */
+            min: string | null;
+            /** Max */
+            max: string | null;
+        };
         /**
          * RangeFacet
          * @description 범위 슬라이더용 최소/최대(매물 없으면 둘 다 null).
@@ -2529,6 +2693,50 @@ export interface components {
             min?: string | null;
             /** Max */
             max?: string | null;
+        };
+        /** RangeFacetGroupV2 */
+        RangeFacetGroupV2: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "range";
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "age_years" | "abv";
+            /** Label */
+            label: string;
+            /** Relevant */
+            relevant: boolean;
+            query: components["schemas"]["RangeQueryV2"];
+            /**
+             * Selection Mode
+             * @constant
+             */
+            selection_mode: "range";
+            selected: components["schemas"]["RangeSelectionV2"];
+            bounds: components["schemas"]["RangeBoundsV2"];
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "years" | "percent";
+        };
+        /** RangeQueryV2 */
+        RangeQueryV2: {
+            /** Min Parameter */
+            min_parameter: string;
+            /** Max Parameter */
+            max_parameter: string;
+        };
+        /** RangeSelectionV2 */
+        RangeSelectionV2: {
+            /** Min */
+            min: string | null;
+            /** Max */
+            max: string | null;
         };
         /**
          * ReviewDetailOut
@@ -2778,6 +2986,16 @@ export interface components {
             /** Id */
             id: number;
         };
+        /** TermsQueryV2 */
+        TermsQueryV2: {
+            /** Parameter */
+            parameter: string;
+            /**
+             * Encoding
+             * @enum {string}
+             */
+            encoding: "repeat" | "single";
+        };
         /** TokenOut */
         TokenOut: {
             /** Access Token */
@@ -2913,12 +3131,14 @@ export interface operations {
                 region?: string[] | null;
                 /** @description 증류소 id. 여러 값=OR. */
                 distillery_id?: number[] | null;
-                /** @description official=공식병입(bottler 없음) / independent=독립병입. */
+                /** @description official=공식병입(bottler 미배정 또는 Official 센티널) / independent=독립병입(실제 병입자 배정). */
                 bottling?: string | null;
                 /** @description 주종. 여러 값=OR. */
                 spirit_type?: string[] | null;
                 /** @description 피트 여부. */
                 peated?: boolean | null;
+                /** @description 피트 상태(피트/논피트/미상). */
+                peated_state?: ("peated" | "unpeated" | "unknown") | null;
                 /** @description 최소 숙성연수. */
                 age_min?: number | null;
                 /** @description 최대 숙성연수. */
@@ -2931,6 +3151,8 @@ export interface operations {
                 volume_ml?: number[] | null;
                 /** @description true=한정판(outturn 있음)만 / false=일반만. */
                 limited?: boolean | null;
+                /** @description 에디션 상태(일반/한정판). */
+                edition_state?: ("standard" | "limited") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -2979,12 +3201,14 @@ export interface operations {
                 /** @description 주종(1차 축) — `axes`(주종별 노출 축)도 이 값으로 결정된다. */
                 spirit_type?: string[] | null;
                 peated?: boolean | null;
+                peated_state?: ("peated" | "unpeated" | "unknown") | null;
                 age_min?: number | null;
                 age_max?: number | null;
                 abv_min?: number | string | null;
                 abv_max?: number | string | null;
                 volume_ml?: number[] | null;
                 limited?: boolean | null;
+                edition_state?: ("standard" | "limited") | null;
             };
             header?: never;
             path: {
@@ -3037,12 +3261,14 @@ export interface operations {
                 region?: string[] | null;
                 /** @description 증류소 id. 여러 값=OR. */
                 distillery_id?: number[] | null;
-                /** @description official=공식병입 / independent=독립병입. */
+                /** @description official=공식병입(bottler 미배정 또는 Official 센티널) / independent=독립병입(실제 병입자 배정). */
                 bottling?: string | null;
                 /** @description 주종. 여러 값=OR. */
                 spirit_type?: string[] | null;
                 /** @description 피트 여부. */
                 peated?: boolean | null;
+                /** @description 피트 상태(피트/논피트/미상). */
+                peated_state?: ("peated" | "unpeated" | "unknown") | null;
                 age_min?: number | null;
                 age_max?: number | null;
                 abv_min?: number | string | null;
@@ -3051,6 +3277,8 @@ export interface operations {
                 volume_ml?: number[] | null;
                 /** @description true=한정판만 / false=일반만. */
                 limited?: boolean | null;
+                /** @description 에디션 상태(일반/한정판). */
+                edition_state?: ("standard" | "limited") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -3099,12 +3327,14 @@ export interface operations {
                 /** @description 주종(1차 축) — `axes`(주종별 노출 축)도 이 값으로 결정된다. */
                 spirit_type?: string[] | null;
                 peated?: boolean | null;
+                peated_state?: ("peated" | "unpeated" | "unknown") | null;
                 age_min?: number | null;
                 age_max?: number | null;
                 abv_min?: number | string | null;
                 abv_max?: number | string | null;
                 volume_ml?: number[] | null;
                 limited?: boolean | null;
+                edition_state?: ("standard" | "limited") | null;
             };
             header?: never;
             path?: never;
@@ -3157,6 +3387,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductPriceHistoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    market_facets_v2_api_v2_markets__market_code__facets_get: {
+        parameters: {
+            query?: {
+                /** @description 판매가능 매물만 집계. 생략 기본 true. */
+                available?: boolean;
+                search?: string | null;
+                cask_family?: string[] | null;
+                cask_type?: string[] | null;
+                cask_material?: string[] | null;
+                country?: string[] | null;
+                region?: string[] | null;
+                distillery_id?: number[] | null;
+                bottling?: string | null;
+                spirit_type?: string[] | null;
+                peated?: boolean | null;
+                peated_state?: ("peated" | "unpeated" | "unknown") | null;
+                age_min?: number | null;
+                age_max?: number | null;
+                abv_min?: number | string | null;
+                abv_max?: number | string | null;
+                volume_ml?: number[] | null;
+                limited?: boolean | null;
+                edition_state?: ("standard" | "limited") | null;
+            };
+            header?: never;
+            path: {
+                market_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketFacetResponseV2"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    catalog_facets_v2_api_v2_products_facets_get: {
+        parameters: {
+            query?: {
+                /** @description 판매가능 매물만 집계. 생략 기본 true. */
+                available?: boolean;
+                market?: string[] | null;
+                search?: string | null;
+                cask_family?: string[] | null;
+                cask_type?: string[] | null;
+                cask_material?: string[] | null;
+                country?: string[] | null;
+                region?: string[] | null;
+                distillery_id?: number[] | null;
+                bottling?: string | null;
+                spirit_type?: string[] | null;
+                peated?: boolean | null;
+                peated_state?: ("peated" | "unpeated" | "unknown") | null;
+                age_min?: number | null;
+                age_max?: number | null;
+                abv_min?: number | string | null;
+                abv_max?: number | string | null;
+                volume_ml?: number[] | null;
+                limited?: boolean | null;
+                edition_state?: ("standard" | "limited") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogFacetResponseV2"];
                 };
             };
             /** @description Validation Error */

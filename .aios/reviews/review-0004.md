@@ -1,0 +1,14 @@
+---
+schema: aios.review/v1
+id: review-0004
+project: whisky-frog-web
+task: task-0004
+attempt: 1
+verdict: pass
+---
+
+# Review of task-0004, Attempt 1
+
+## Findings
+
+Verified by direct inspection, not just the attempt's claims. `app/lib/api/facet-contract.ts` derives the v2/legacy discriminated union and route/operation ids straight from `types.gen.ts`. `app/lib/facet-view.ts` switches only on `group.kind` ('terms'/'range') with a compile-time `assertNeverGroupKind(group: never)` exhaustiveness guard — confirmed no facet-key list exists anywhere in facet-view.ts/ProductFacetPanel.tsx/facet-contract.ts (grepped for all known keys: none found). Cross-checked the generated schema directly: CatalogTermsFacetGroupV2/MarketTermsFacetGroupV2/RangeFacetGroupV2/FacetOptionV2/FacetParentV2 all match what facet-contract.ts and facet-view.ts consume, and `peated`/`limited` (edition_state) groups in the fixture match the real enum `key` values and `query.parameter` names (`peated_state`, `edition_state`) from types.gen.ts. Ran the real commands: `npx tsc --noEmit` clean; `npm test` (tsc + node test runner) → 48/48 pass, including the jsdom+axe component suite (verified those specific tests actually executed, not skipped); `npm run build` → production build and static generation succeed with no ignoreBuildErrors escape hatch in next.config. Confirmed via file mtimes that only facet-contract.ts/facet-view.ts/ProductFacetPanel.tsx/tests were touched by this attempt (18:51+), while catalog.ts/products.ts/product-query.ts predate it (14:29, task-0003) and ProductFacetSidebar.tsx is untouched (Jul 17) — matching the 'no page integration in this task' constraint. Reducer preserves count-0, relevant:false, and dropped-entirely selections via a retained-label cache that only clears on explicit per-facet clear or full reset (traced through reconcileFacetViewState/forgetRetainedFacet/resetFacetViewState and their tests). Dependency parents render as a breadcrumb from generic `option.parents`, and no code path auto-clears a sibling/child facet when another facet changes (setFacetSelection only touches the one key). Drawer keeps Escape/backdrop/inert/aria-hidden/scroll-lock and adds real focus entry, Tab containment (verified via a 40-iteration tab-trap test), trigger-focus restoration, and aria-labelledby dialog naming. Unhandled discriminator variant is caught and rendered as a role='alert' safe state rather than thrown/discarded. Confirmed git status is byte-identical before and after my review and nothing under .aios/ was touched. One non-blocking observation: the narrow/wide (375px/1280px) viewport-parameterized test exercises open/change/close but not the tab-navigate or explicit-clear flows at each width specifically (those are covered once, at default width) — not blocking since the drawer has no width-conditional logic that those extra repetitions would exercise differently.

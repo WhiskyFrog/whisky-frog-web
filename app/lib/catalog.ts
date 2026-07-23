@@ -1,5 +1,6 @@
 import { API_BASE_URL, ensureOk } from "./auth";
 import type { components } from "./api/types.gen";
+import { serializeLegacyFlatProductQuery } from "./api/product-query";
 import type { FacetCount, MarketFacets, MarketProductQuery } from "./products";
 
 export type CatalogProduct = components["schemas"]["CatalogProductOut"];
@@ -18,57 +19,11 @@ export interface CatalogQuery extends MarketProductQuery {
   sort?: "name" | "price";
 }
 
-function appendValues(
-  params: URLSearchParams,
-  key: string,
-  values: Array<string | number> | undefined,
-) {
-  for (const value of values ?? []) {
-    params.append(key, String(value));
-  }
-}
-
-function setIfPresent(
-  params: URLSearchParams,
-  key: string,
-  value: string | number | boolean | null | undefined,
-) {
-  if (value !== undefined && value !== null && value !== "") {
-    params.set(key, String(value));
-  }
-}
-
-/** 목록·패싯 공용 필터 파라미터 — 패싯도 교차 좁힘(DECISIONS 035)으로 같은 필터를 받는다. */
-function appendCatalogFilterParams(params: URLSearchParams, query: CatalogQuery) {
-  setIfPresent(params, "available", query.available);
-  appendValues(params, "market", query.market);
-  setIfPresent(params, "search", query.search?.trim() || null);
-  appendValues(params, "cask_family", query.cask_family);
-  appendValues(params, "cask_type", query.cask_type);
-  appendValues(params, "cask_material", query.cask_material);
-  appendValues(params, "country", query.country);
-  appendValues(params, "region", query.region);
-  appendValues(params, "distillery_id", query.distillery_id);
-  setIfPresent(params, "bottling", query.bottling);
-  setIfPresent(params, "peated", query.peated);
-  setIfPresent(params, "age_min", query.age_min);
-  setIfPresent(params, "age_max", query.age_max);
-  setIfPresent(params, "abv_min", query.abv_min);
-  setIfPresent(params, "abv_max", query.abv_max);
-  appendValues(params, "spirit_type", query.spirit_type);
-  appendValues(params, "volume_ml", query.volume_ml);
-  setIfPresent(params, "limited", query.limited);
-}
-
 export async function listCatalogProducts(
   query: CatalogQuery = {},
   signal?: AbortSignal,
 ): Promise<CatalogProduct[]> {
-  const params = new URLSearchParams();
-  appendCatalogFilterParams(params, query);
-  setIfPresent(params, "sort", query.sort);
-  setIfPresent(params, "limit", query.limit);
-  setIfPresent(params, "offset", query.offset);
+  const params = serializeLegacyFlatProductQuery(query, true);
 
   const qs = params.toString();
   const res = await fetch(`${API_BASE_URL}/api/products${qs ? `?${qs}` : ""}`, {
@@ -83,8 +38,7 @@ export async function getCatalogFacets(
   query: CatalogQuery = {},
   signal?: AbortSignal,
 ): Promise<CatalogFacets> {
-  const params = new URLSearchParams();
-  appendCatalogFilterParams(params, query);
+  const params = serializeLegacyFlatProductQuery(query, false);
   const qs = params.toString();
   const res = await fetch(
     `${API_BASE_URL}/api/products/facets${qs ? `?${qs}` : ""}`,

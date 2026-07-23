@@ -1,6 +1,7 @@
 import { API_BASE_URL, ensureOk } from "./auth";
 import { CURRENCY_SYMBOLS } from "./markets";
 import type { components } from "./api/types.gen";
+import { serializeLegacyFlatProductQuery } from "./api/product-query";
 
 export type MarketProduct = components["schemas"]["MarketProductOut"];
 
@@ -73,62 +74,12 @@ export interface MarketFacets {
   abv: RangeFacet;
 }
 
-function appendValues(
-  params: URLSearchParams,
-  key: string,
-  values: Array<string | number> | undefined,
-) {
-  for (const value of values ?? []) {
-    params.append(key, String(value));
-  }
-}
-
-/** 목록·패싯 공용 필터 파라미터 — 패싯도 교차 좁힘(DECISIONS 035)으로 같은 필터를 받는다. */
-function appendProductFilterParams(
-  params: URLSearchParams,
-  query: MarketProductQuery,
-) {
-  if (query.available !== undefined && query.available !== null) {
-    params.set("available", String(query.available));
-  }
-  appendValues(params, "cask_family", query.cask_family);
-  appendValues(params, "cask_type", query.cask_type);
-  appendValues(params, "cask_material", query.cask_material);
-  appendValues(params, "country", query.country);
-  appendValues(params, "region", query.region);
-  appendValues(params, "distillery_id", query.distillery_id);
-  if (query.bottling) params.set("bottling", query.bottling);
-  appendValues(params, "spirit_type", query.spirit_type);
-  if (query.peated !== undefined && query.peated !== null) {
-    params.set("peated", String(query.peated));
-  }
-  if (query.age_min !== undefined && query.age_min !== null) {
-    params.set("age_min", String(query.age_min));
-  }
-  if (query.age_max !== undefined && query.age_max !== null) {
-    params.set("age_max", String(query.age_max));
-  }
-  if (query.abv_min !== undefined && query.abv_min !== null) {
-    params.set("abv_min", String(query.abv_min));
-  }
-  if (query.abv_max !== undefined && query.abv_max !== null) {
-    params.set("abv_max", String(query.abv_max));
-  }
-  appendValues(params, "volume_ml", query.volume_ml);
-  if (query.limited !== undefined && query.limited !== null) {
-    params.set("limited", String(query.limited));
-  }
-}
-
 export async function listMarketProducts(
   marketCode: string,
   query: MarketProductQuery = {},
   signal?: AbortSignal,
 ): Promise<MarketProduct[]> {
-  const params = new URLSearchParams();
-  appendProductFilterParams(params, query);
-  if (query.limit !== undefined) params.set("limit", String(query.limit));
-  if (query.offset !== undefined) params.set("offset", String(query.offset));
+  const params = serializeLegacyFlatProductQuery(query, true);
 
   const qs = params.toString();
   const res = await fetch(
@@ -144,8 +95,7 @@ export async function getMarketFacets(
   query: MarketProductQuery = {},
   signal?: AbortSignal,
 ): Promise<MarketFacets> {
-  const params = new URLSearchParams();
-  appendProductFilterParams(params, query);
+  const params = serializeLegacyFlatProductQuery(query, false);
   const qs = params.toString();
   const res = await fetch(
     `${API_BASE_URL}/api/markets/${encodeURIComponent(marketCode)}/facets${qs ? `?${qs}` : ""}`,

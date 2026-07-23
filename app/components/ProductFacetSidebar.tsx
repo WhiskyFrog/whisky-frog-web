@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { FacetCount, MarketFacets } from "../lib/products";
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function focusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+}
 
 /** per-market·통합 카탈로그가 공유하는 위스키 패싯 필터 상태. `market`은 카탈로그에서만 쓴다. */
 export type ProductFilters = {
@@ -204,6 +211,7 @@ export function ProductFacetSidebar({
   onFilters,
   onReset,
   marketOptions,
+  resultNoun = "상품",
 }: {
   facets: MarketFacets | null;
   filters: ProductFilters;
@@ -211,23 +219,56 @@ export function ProductFacetSidebar({
   onReset: () => void;
   /** 통합 카탈로그 전용 — 마켓 축(facets.market). 주면 최상단에 마켓 섹션을 렌더한다. */
   marketOptions?: FacetCount[];
+  /** 드로어 부제의 total 단위 — 카탈로그는 "상품"(기본), per-market은 "오퍼". */
+  resultNoun?: string;
 }) {
   const ready = facets !== null;
   const [open, setOpen] = useState(false);
   const activeCount = activeFilterCount(filters);
+  const headingId = useId();
+  const dialogRef = useRef<HTMLElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
-  // 드로어 열림 동안 Esc 닫기 + 바디 스크롤 잠금.
+  // 드로어 열림 동안 포커스 트랩 + Esc 닫기 + 바디 스크롤 잠금, 닫히면 트리거로 포커스 복원.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const initial = focusableElements(dialog)[0];
+    initial?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusableElements(dialog);
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener("keydown", onKey);
+
+    document.addEventListener("keydown", onKeyDown);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prevOverflow;
+      previouslyFocused.current?.focus?.();
     };
   }, [open]);
 
@@ -271,6 +312,10 @@ export function ProductFacetSidebar({
       )}
 
       <aside
+        ref={dialogRef}
+        role="dialog"
+        aria-modal={open}
+        aria-labelledby={headingId}
         inert={!open}
         aria-hidden={!open}
         className={`fixed inset-y-0 left-0 z-50 flex w-80 max-w-[85vw] transform flex-col border-r border-gray-200 bg-white shadow-xl transition-transform duration-200 dark:border-gray-800 dark:bg-gray-950 ${
@@ -279,12 +324,15 @@ export function ProductFacetSidebar({
       >
         <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
           <div>
-            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <h2
+              id={headingId}
+              className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100"
+            >
               필터
               <CountBadge count={activeCount} />
             </h2>
             <p className="mt-0.5 text-xs text-gray-400">
-              {ready ? `${facets.total}개 상품` : "불러오는 중"}
+              {ready ? `${facets.total}개 ${resultNoun}` : "불러오는 중"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">

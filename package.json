@@ -7,8 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "tsc --noEmit && node --import ./tests/register-typescript.mjs --test tests/*.test.{mts,tsx}",
     "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o app/lib/api/types.gen.ts",
-    "gen:api:prod": "openapi-typescript https://web-production-867c7.up.railway.app/openapi.json -o app/lib/api/types.gen.ts"
+    "gen:api:prod": "openapi-typescript https://whisky-frog.vercel.app/backend-api/openapi.json -o app/lib/api/types.gen.ts",
+    "smoke:prod": "node --import ./tests/register-typescript.mjs scripts/prod-smoke.mts",
+    "e2e:build:v2": "NEXT_PUBLIC_API_BASE_URL=https://mock-backend.e2e.invalid NEXT_PUBLIC_PRODUCT_API_VERSION=v2 next build",
+    "e2e:build:legacy": "NEXT_PUBLIC_API_BASE_URL=https://mock-backend.e2e.invalid NEXT_PUBLIC_PRODUCT_API_VERSION=legacy next build",
+    "e2e": "playwright test",
+    "e2e:full": "npm run e2e:build:v2 && PW_VERSION=v2 npm run e2e",
+    "e2e:v2": "npm run e2e:build:v2 && PW_VERSION=v2 npm run e2e -- --grep @critical",
+    "e2e:legacy": "npm run e2e:build:legacy && PW_VERSION=legacy npm run e2e -- --grep @critical"
   },
   "dependencies": {
     "next": "^15.2.1",
@@ -16,10 +24,15 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
+    "axe-core": "^4.12.1",
+    "jsdom": "^29.1.1",
     "openapi-typescript": "^7.4.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
