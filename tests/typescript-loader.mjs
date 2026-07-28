@@ -16,6 +16,12 @@ export async function resolve(specifier, context, nextResolve) {
       shortCircuit: true,
     };
   }
+  if (specifier === "next/navigation") {
+    return {
+      url: new URL("./next-navigation.ts", import.meta.url).href,
+      shortCircuit: true,
+    };
+  }
   try {
     return await nextResolve(specifier, context);
   } catch (error) {

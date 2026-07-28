@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { FacetCount, MarketFacets } from "../lib/products";
+import { isPublicHiddenFacetKey } from "../lib/facet-visibility";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -272,7 +273,11 @@ export function ProductFacetSidebar({
     };
   }, [open]);
 
-  const axisOn = (axis: string) => facets !== null && facets.axes.includes(axis);
+  // This is the legacy renderer's presentation boundary: the response and
+  // caller-owned selection retain hidden cask data, but no public section can
+  // become enabled for one of the shared hidden keys.
+  const axisOn = (axis: string) =>
+    facets !== null && facets.axes.includes(axis) && !isPublicHiddenFacetKey(axis);
   const toggleOf =
     (key: "market" | "cask_family" | "cask_type" | "cask_material" | "country" | "region" | "spirit_type") =>
     (value: string) =>

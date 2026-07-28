@@ -20,9 +20,9 @@ import {
   type FacetQueryMetadata,
   type ProductQueryState,
 } from "../app/lib/api/product-query.ts";
-import { catalogFacetV2Fixture } from "./fixtures/facet-responses.ts";
+import { catalogFacetV2FixtureWithCask } from "./fixtures/facet-responses.ts";
 
-const metadata: readonly FacetQueryMetadata[] = catalogFacetV2Fixture.groups;
+const metadata: readonly FacetQueryMetadata[] = catalogFacetV2FixtureWithCask.groups;
 
 function state(
   partial: Partial<ProductQueryState> = {},
@@ -94,6 +94,30 @@ test("Unicode search and reserved facet characters round trip safely", () => {
     "search=%ED%95%9C%EA%B8%80+%26+cask%3Dwine&server_filter=a%26b%3Dc+%2F+%ED%95%9C%EA%B8%80",
   );
   assert.deepEqual(parseProductQueryState(encoded, reservedMetadata), initial);
+});
+
+test("hidden public cask selections still parse and serialize through the unchanged transport contract", () => {
+  const deepLink =
+    "cask_family=ex_bourbon&cask_family=sherry&cask_type=hogshead&cask_material=oak";
+  const parsed = parseProductQueryState(deepLink, metadata);
+
+  assert.deepEqual(parsed.facets.cask_family, {
+    kind: "terms",
+    values: ["ex_bourbon", "sherry"],
+  });
+  assert.deepEqual(parsed.facets.cask_type, {
+    kind: "terms",
+    values: ["hogshead"],
+  });
+  assert.deepEqual(parsed.facets.cask_material, {
+    kind: "terms",
+    values: ["oak"],
+  });
+  assert.equal(
+    serializeProductQueryState(parsed, metadata).toString(),
+    "cask_family=ex_bourbon&cask_family=sherry&cask_material=oak&cask_type=hogshead",
+  );
+  assert.deepEqual(resetProductQueryState(parsed).facets, {});
 });
 
 test("range endpoints preserve zero and both deployed range variants", () => {
@@ -322,6 +346,9 @@ test("legacy fallback keeps flat query behavior and a coherent legacy pair", asy
       {
         available: false,
         market: ["a", "b"],
+        cask_family: ["ex_bourbon"],
+        cask_type: ["hogshead"],
+        cask_material: ["oak"],
         peated: false,
         age_min: 0,
         limited: false,
@@ -331,7 +358,7 @@ test("legacy fallback keeps flat query behavior and a coherent legacy pair", asy
       },
       true,
     ).toString(),
-    "available=false&market=a&market=b&peated=false&age_min=0&limited=false&sort=name&limit=50&offset=0",
+    "available=false&market=a&market=b&cask_family=ex_bourbon&cask_type=hogshead&cask_material=oak&peated=false&age_min=0&limited=false&sort=name&limit=50&offset=0",
   );
 
   const legacyState = state({

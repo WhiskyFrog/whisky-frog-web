@@ -57,10 +57,10 @@ test("a fixture with unfamiliar labels and keys renders generically without a co
     groups: [
       {
         kind: "terms",
-        key: "cask_type",
+        key: "experimental_finish",
         label: "Zzyzx Vessel Class",
         relevant: true,
-        query: { parameter: "cask_type", encoding: "repeat" },
+        query: { parameter: "experimental_finish", encoding: "repeat" },
         selection_mode: "multiple",
         selected: ["glorp"],
         options: [
@@ -69,14 +69,14 @@ test("a fixture with unfamiliar labels and keys renders generically without a co
         ],
       },
     ],
-  } as const satisfies CatalogFacetResponseV2;
+  } as unknown as CatalogFacetResponseV2;
 
   const view = buildFacetGroupViewModels(
     exotic.groups,
     EMPTY_FACET_VIEW_STATE,
-    { cask_type: { kind: "terms", values: ["glorp"] } },
+    { experimental_finish: { kind: "terms", values: ["glorp"] } },
   );
-  const group = termsGroup(view, "cask_type");
+  const group = termsGroup(view, "experimental_finish");
   assert.equal(group.label, "Zzyzx Vessel Class");
   assert.deepEqual(
     group.options.map((option) => [option.value, option.label, option.selected]),

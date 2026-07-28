@@ -8,7 +8,10 @@ import {
   type ProductQueryScope,
   type ProductQueryState,
 } from "../app/lib/api/product-query.ts";
-import { catalogFacetV2Fixture, marketFacetV2Fixture } from "./fixtures/facet-responses.ts";
+import {
+  catalogFacetV2FixtureWithCask,
+  marketFacetV2Fixture,
+} from "./fixtures/facet-responses.ts";
 
 /**
  * Joined request-parity matrix (task-0007 acceptance criterion 2).
@@ -24,7 +27,7 @@ import { catalogFacetV2Fixture, marketFacetV2Fixture } from "./fixtures/facet-re
  * (`age_years`) and one `relevant: false` (`abv`) — which covers every case
  * the acceptance criterion enumerates without inventing a parallel contract.
  */
-const metadata: readonly FacetQueryMetadata[] = catalogFacetV2Fixture.groups;
+const metadata: readonly FacetQueryMetadata[] = catalogFacetV2FixtureWithCask.groups;
 
 function state(overrides: Partial<ProductQueryState> = {}): ProductQueryState {
   return { ...EMPTY_PRODUCT_QUERY_STATE, ...overrides };
@@ -65,6 +68,16 @@ const cases: Case[] = [
   {
     name: "multi-select",
     overrides: { facets: { market: { kind: "terms", values: ["market-a", "market-b"] } } },
+  },
+  {
+    name: "hidden cask selections",
+    overrides: {
+      facets: {
+        cask_family: { kind: "terms", values: ["ex_bourbon", "sherry"] },
+        cask_type: { kind: "terms", values: ["hogshead"] },
+        cask_material: { kind: "terms", values: ["oak"] },
+      },
+    },
   },
   {
     name: "single-select",
@@ -182,10 +195,10 @@ test("catalog totals are scoped to distinct products; market totals are scoped t
   // suite), their facet responses never share a count identity. A regression
   // that relabeled one scope's total as the other's noun would not be caught
   // by parameter-equality assertions alone, so it is checked separately here.
-  assert.equal(catalogFacetV2Fixture.count_unit, "product");
+  assert.equal(catalogFacetV2FixtureWithCask.count_unit, "product");
   assert.equal(marketFacetV2Fixture.count_unit, "offer");
   assert.notEqual(
-    (catalogFacetV2Fixture as { count_unit: string }).count_unit,
+    (catalogFacetV2FixtureWithCask as { count_unit: string }).count_unit,
     (marketFacetV2Fixture as { count_unit: string }).count_unit,
   );
 });

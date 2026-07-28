@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { FacetResponseV2 } from "../lib/api/facet-contract";
 import type { FacetSelection, FacetValue, ProductQueryState } from "../lib/api/product-query";
+import { isPublicHiddenFacetKey } from "../lib/facet-visibility";
 import {
   buildFacetGroupViewModels,
   EMPTY_FACET_VIEW_STATE,
@@ -289,7 +290,9 @@ export function ProductFacetPanel({
     try {
       const reconciled = reconcileFacetViewState(viewState, response.groups);
       return {
-        groups: buildFacetGroupViewModels(response.groups, reconciled, selection),
+        groups: buildFacetGroupViewModels(response.groups, reconciled, selection).filter(
+          (group) => !isPublicHiddenFacetKey(group.key),
+        ),
         contractError: null,
         reconciledViewState: reconciled,
       };

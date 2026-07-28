@@ -24,6 +24,34 @@ export const legacyCatalogFacetFixture = {
   market: [{ value: "market-a", count: 2, korean: "예시 마켓" }],
 } as const satisfies CatalogFacetResponseLegacy;
 
+/**
+ * Legacy public-drawer regression fixture. All three cask arrays are
+ * intentionally populated and enabled in `axes`; non-cask catalog terms and
+ * ranges are enabled alongside them so hiding cask controls cannot be made to
+ * pass by rendering an empty drawer.
+ */
+export const legacyCatalogFacetFixtureWithCask = {
+  ...legacyCatalogFacetFixture,
+  axes: [
+    "cask_material",
+    "market",
+    "cask_family",
+    "spirit_type",
+    "age_years",
+    "cask_type",
+    "abv",
+  ],
+  cask_family: [
+    { value: "ex_bourbon", count: 5, korean: "버번 캐스크" },
+    { value: "sherry", count: 3, korean: "셰리 캐스크" },
+  ],
+  cask_type: [
+    { value: "hogshead", count: 4, korean: "혹스헤드" },
+    { value: "barrel", count: 2, korean: "배럴" },
+  ],
+  cask_material: [{ value: "oak", count: 9, korean: "오크" }],
+} as const satisfies CatalogFacetResponseLegacy;
+
 export const catalogFacetV2Fixture = {
   version: "2",
   total: 2,
@@ -112,6 +140,63 @@ export const catalogFacetV2Fixture = {
       selected: { min: null, max: null },
       bounds: { min: "40.0", max: "62.5" },
       unit: "percent",
+    },
+  ],
+} as const satisfies CatalogFacetResponseV2;
+
+/**
+ * Same catalog v2 response as `catalogFacetV2Fixture`, with the three public
+ * cask groups spliced in at different positions in the response order, each
+ * populated with counts and a selection, and one carrying a dependency parent
+ * — evidence that hiding them doesn't depend on where the server places them,
+ * whether they're `relevant`, or whether an option has a parent chain.
+ */
+export const catalogFacetV2FixtureWithCask = {
+  ...catalogFacetV2Fixture,
+  groups: [
+    {
+      kind: "terms",
+      key: "cask_family",
+      label: "캐스크",
+      relevant: true,
+      query: { parameter: "cask_family", encoding: "repeat" },
+      selection_mode: "multiple",
+      selected: ["ex_bourbon"],
+      options: [
+        { value: "ex_bourbon", label: "버번 캐스크", count: 5, selected: true },
+        { value: "sherry", label: "셰리 캐스크", count: 3, selected: false },
+      ],
+    },
+    ...catalogFacetV2Fixture.groups.slice(0, 2),
+    {
+      kind: "terms",
+      key: "cask_type",
+      label: "캐스크 타입",
+      relevant: true,
+      query: { parameter: "cask_type", encoding: "repeat" },
+      selection_mode: "multiple",
+      selected: ["hogshead"],
+      options: [
+        {
+          value: "hogshead",
+          label: "혹스헤드",
+          count: 4,
+          selected: true,
+          parents: [{ key: "region", value: "sample-cask-parent", label: "예시 캐스크 상위" }],
+        },
+        { value: "barrel", label: "배럴", count: 2, selected: false },
+      ],
+    },
+    ...catalogFacetV2Fixture.groups.slice(2),
+    {
+      kind: "terms",
+      key: "cask_material",
+      label: "캐스크 재질",
+      relevant: false,
+      query: { parameter: "cask_material", encoding: "repeat" },
+      selection_mode: "multiple",
+      selected: [],
+      options: [{ value: "oak", label: "오크", count: 9, selected: false }],
     },
   ],
 } as const satisfies CatalogFacetResponseV2;

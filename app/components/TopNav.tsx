@@ -33,21 +33,21 @@ export function TopNav() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-30 flex h-16 items-center justify-between border-b-2 border-[#D8A868] bg-[#FFF8EA]/95 px-3 text-[#302818] backdrop-blur sm:px-8 lg:px-12">
-      <div className="flex items-center gap-3 sm:gap-7">
+    <nav className="sticky top-0 z-30 grid grid-cols-[auto_1fr_auto] items-center gap-y-1 border-b-2 border-[#D8A868] bg-[#FFF8EA]/95 px-3 py-2 text-[#302818] backdrop-blur sm:flex sm:h-16 sm:justify-between sm:gap-y-0 sm:px-8 sm:py-0 lg:px-12">
+      <div className="contents sm:flex sm:items-center sm:gap-7">
         <Link
           href="/"
-          className="whitespace-nowrap text-base font-black tracking-wide sm:text-lg"
+          className="col-span-2 col-start-1 row-start-1 whitespace-nowrap rounded-sm text-base font-black tracking-wide focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#302818] sm:col-auto sm:row-auto sm:text-lg"
         >
           Whisky Frog
         </Link>
 
-        <div className="group relative -mx-3">
+        <div className="group relative col-start-1 row-start-2 -mx-3 justify-self-start sm:col-auto sm:row-auto sm:justify-self-auto">
           <span className="inline-flex cursor-default select-none items-center whitespace-nowrap px-3 py-3 text-xs font-bold text-[#5A421F] group-hover:text-[#302818] sm:text-sm">
             마켓
           </span>
           {/* top-full에 바로 붙이고 pt-2는 투명 브리지 — 트리거~카드 사이 호버 유지(틈 없음) */}
-          <div className="invisible absolute right-0 top-full z-20 pt-2 opacity-0 transition-opacity duration-100 group-hover:visible group-hover:opacity-100 sm:left-0 sm:right-auto">
+          <div className="invisible absolute left-0 top-full z-20 pt-2 opacity-0 transition-opacity duration-100 group-hover:visible group-hover:opacity-100">
             <div className="min-w-[210px] rounded-md border-2 border-[#D8A868] bg-[#FFF8EA] py-1 shadow-[0_8px_0_rgba(128,88,24,0.14)]">
               {!loaded ? (
                 <p className="px-3 py-2 text-xs font-semibold text-[#987850]">
@@ -77,14 +77,14 @@ export function TopNav() {
 
         <Link
           href="/products"
-          className="hidden whitespace-nowrap text-xs font-bold text-[#5A421F] hover:text-[#302818] sm:block sm:text-sm"
+          className="col-start-2 row-start-2 justify-self-center whitespace-nowrap rounded-sm text-xs font-bold text-[#5A421F] hover:text-[#302818] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#302818] sm:col-auto sm:row-auto sm:justify-self-auto sm:text-sm"
         >
           가격 비교
         </Link>
 
         <Link
           href="/direct-price"
-          className="hidden whitespace-nowrap text-xs font-bold text-[#5A421F] hover:text-[#302818] sm:block sm:text-sm"
+          className="col-start-3 row-start-2 justify-self-end whitespace-nowrap rounded-sm text-xs font-bold text-[#5A421F] hover:text-[#302818] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#302818] sm:col-auto sm:row-auto sm:justify-self-auto sm:text-sm"
         >
           직구가 계산
         </Link>
@@ -92,7 +92,7 @@ export function TopNav() {
 
       <button
         onClick={handleAdminClick}
-        className="whitespace-nowrap rounded-md border-2 border-[#805818] bg-[#F8E7C6] px-2.5 py-1 text-xs font-bold text-[#4B3418] hover:bg-[#FFEFCF] sm:px-3 sm:py-1.5 sm:text-sm"
+        className="col-start-3 row-start-1 justify-self-end whitespace-nowrap rounded-md border-2 border-[#805818] bg-[#F8E7C6] px-2.5 py-1 text-xs font-bold text-[#4B3418] hover:bg-[#FFEFCF] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#302818] sm:col-auto sm:row-auto sm:justify-self-auto sm:px-3 sm:py-1.5 sm:text-sm"
       >
         관리자
       </button>

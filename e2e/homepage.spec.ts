@@ -42,6 +42,18 @@ function directPriceLink(page: Page): Locator {
   return page.getByRole("link", { name: "직구가 계산하기" });
 }
 
+function topNav(page: Page): Locator {
+  return page.getByRole("navigation").first();
+}
+
+function topNavPriceComparisonLink(page: Page): Locator {
+  return topNav(page).getByRole("link", { name: "가격 비교", exact: true });
+}
+
+function topNavDirectPriceLink(page: Page): Locator {
+  return topNav(page).getByRole("link", { name: "직구가 계산", exact: true });
+}
+
 test.describe("public homepage regression boundary", () => {
   test.beforeEach(async ({ page }) => {
     const state = defaultMockState();
@@ -50,70 +62,131 @@ test.describe("public homepage regression boundary", () => {
     (page as unknown as { __homepageMockState: typeof state }).__homepageMockState = state;
   });
 
-  test("contains the page at narrow and wide viewports without obscuring its content", async ({
+  test("contains every TopNav control at narrow, intermediate, and wide viewports", async ({
     page,
   }, testInfo) => {
-    if (testInfo.project.name === "narrow") {
-      await page.setViewportSize({ width: 320, height: 720 });
-    }
-    await page.goto("/");
+    const widths = testInfo.project.name === "narrow" ? [320, 768] : [1280];
 
-    const expectedWidth = testInfo.project.name === "narrow" ? 320 : 1280;
-    expect(page.viewportSize()?.width).toBe(expectedWidth);
-    await expect(page.getByRole("main", { name: "Whisky Frog" })).toBeVisible();
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: width === 320 ? 720 : 800 });
+      await page.goto("/");
 
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-        ),
-      )
-      .toBe(true);
+      expect(page.viewportSize()?.width).toBe(width);
+      const main = page.getByRole("main", { name: "Whisky Frog" });
+      const stickyNav = topNav(page);
+      const requiredLinks = [
+        [topNavPriceComparisonLink(page), "/products"],
+        [topNavDirectPriceLink(page), "/direct-price"],
+      ] as const;
+      const requiredControls = [
+        stickyNav.getByRole("link", { name: "Whisky Frog", exact: true }),
+        stickyNav.getByText("마켓", { exact: true }),
+        ...requiredLinks.map(([link]) => link),
+        stickyNav.getByRole("button", { name: "관리자", exact: true }),
+      ];
 
-    for (const name of characterNames) {
-      const image = page.getByRole("img", { name });
-      await expect(image).toHaveCount(1);
-      await expect(image).toBeVisible();
+      await expect(main).toBeVisible();
+      await expect(stickyNav).toBeVisible();
+      for (const [link, destination] of requiredLinks) {
+        await expect(link).toHaveAttribute("href", destination);
+      }
+
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const nav = document.querySelector("nav");
+            return {
+              documentContained:
+                document.documentElement.scrollWidth <=
+                document.documentElement.clientWidth,
+              navigationContained:
+                nav !== null && nav.scrollWidth <= nav.clientWidth,
+            };
+          }),
+        )
+        .toEqual({ documentContained: true, navigationContained: true });
+
+      const navHandle = await stickyNav.elementHandle();
+      expect(navHandle).not.toBeNull();
+      for (const control of requiredControls) {
+        await expect(control).toBeVisible();
+        expect(
+          await control.evaluate((element, nav) => {
+            const rect = element.getBoundingClientRect();
+            const navRect = (nav as Element).getBoundingClientRect();
+            const hit = document.elementFromPoint(
+              rect.left + rect.width / 2,
+              rect.top + rect.height / 2,
+            );
+            return (
+              rect.width > 0 &&
+              rect.height > 0 &&
+              rect.left >= 0 &&
+              rect.right <= window.innerWidth &&
+              rect.top >= navRect.top &&
+              rect.bottom <= navRect.bottom &&
+              (hit === element || element.contains(hit))
+            );
+          }, navHandle),
+        ).toBe(true);
+      }
+
       expect(
-        await image.evaluate((element) => {
-          const imageElement = element as HTMLImageElement;
-          const imageRect = imageElement.getBoundingClientRect();
-          const frameRect = imageElement.parentElement?.parentElement?.getBoundingClientRect();
-          return (
-            imageElement.complete &&
-            imageElement.naturalWidth > 0 &&
-            imageRect.width > 0 &&
-            imageRect.height > 0 &&
-            frameRect !== undefined &&
-            imageRect.right > frameRect.left &&
-            imageRect.left < frameRect.right &&
-            imageRect.bottom > frameRect.top &&
-            imageRect.top < frameRect.bottom
-          );
-        }),
-      ).toBe(true);
-    }
-
-    const stickyNav = page.getByRole("navigation").first();
-    for (const link of [marketLink(page), directPriceLink(page)]) {
-      await expect(link).toBeVisible();
-      await link.scrollIntoViewIfNeeded();
-      expect(
-        await link.evaluate((element, nav) => {
-          const rect = element.getBoundingClientRect();
+        await main.evaluate((element, nav) => {
+          const mainRect = element.getBoundingClientRect();
           const navRect = (nav as Element).getBoundingClientRect();
-          const hit = document.elementFromPoint(
-            rect.left + rect.width / 2,
-            rect.top + rect.height / 2,
-          );
-          return (
-            rect.width > 0 &&
-            rect.height > 0 &&
-            rect.top >= navRect.bottom &&
-            (hit === element || element.contains(hit))
-          );
-        }, await stickyNav.elementHandle()),
+          return mainRect.top >= navRect.bottom;
+        }, navHandle),
       ).toBe(true);
+
+      await requiredControls[1]!.hover();
+      const loadedMarketLink = stickyNav.getByRole("link", {
+        name: /예시 마켓.*JPY/,
+      });
+      await expect(loadedMarketLink).toBeVisible();
+      await expect(loadedMarketLink).toHaveAttribute("href", "/markets/market-a");
+
+      await page.evaluate(() => {
+        document.addEventListener(
+          "click",
+          (event) => {
+            const anchor = (event.target as Element).closest(
+              'nav a[href="/products"], nav a[href="/direct-price"]',
+            );
+            if (!anchor) return;
+            event.preventDefault();
+            document.body.dataset.lastTopNavActivation =
+              anchor.getAttribute("href") ?? "";
+          },
+          { capture: true },
+        );
+      });
+
+      for (const [link, destination] of requiredLinks) {
+        await link.focus();
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Shift+Tab");
+        await expect(link).toBeFocused();
+        expect(
+          await link.evaluate((element) => {
+            const styles = getComputedStyle(element);
+            return (
+              styles.outlineStyle !== "none" &&
+              Number.parseFloat(styles.outlineWidth) > 0
+            );
+          }),
+        ).toBe(true);
+        await page.keyboard.press("Enter");
+        await expect
+          .poll(() => page.locator("body").getAttribute("data-last-top-nav-activation"))
+          .toBe(destination);
+      }
+
+      for (const name of characterNames) {
+        const image = page.getByRole("img", { name });
+        await expect(image).toHaveCount(1);
+        await expect(image).toBeVisible();
+      }
     }
 
     const state = (
@@ -121,7 +194,9 @@ test.describe("public homepage regression boundary", () => {
         __homepageMockState: ReturnType<typeof defaultMockState>;
       }
     ).__homepageMockState;
-    await expect.poll(() => requestsMatching(state, "/api/markets").length).toBe(1);
+    await expect
+      .poll(() => requestsMatching(state, "/api/markets").length)
+      .toBe(widths.length);
   });
 
   test("primary links have visible non-color-only focus and activate in logical keyboard order", async ({

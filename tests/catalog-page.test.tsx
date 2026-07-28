@@ -6,12 +6,26 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 
 import { CatalogPageView } from "../app/components/CatalogView";
-import { catalogFacetV2Fixture, legacyCatalogFacetFixture } from "./fixtures/facet-responses";
+import {
+  catalogFacetV2Fixture,
+  legacyCatalogFacetFixture,
+  legacyCatalogFacetFixtureWithCask,
+} from "./fixtures/facet-responses";
 import type { CatalogProduct } from "../app/lib/catalog";
 
 afterEach(() => {
   cleanup();
 });
+
+/**
+ * `assert.equal(node, null)` on a failing (non-null) match forces Node's assert
+ * module to `util.inspect` a live jsdom element for the diff message, which is
+ * prohibitively slow given jsdom's circular window/document graph. Comparing
+ * booleans keeps an absence check just as strict without that failure-path cost.
+ */
+function assertAbsent(element: unknown, message?: string): void {
+  assert.equal(element === null, true, message);
+}
 
 const originalFetch = globalThis.fetch;
 beforeEach(() => {
@@ -144,6 +158,74 @@ test("legacy mode renders the legacy sidebar (not the v2 panel) and fetches only
   // The legacy sidebar shows the (legacy) facet total in its drawer subtitle once opened.
   await userEvent.setup().click(screen.getByRole("button", { name: /필터/ }));
   assert.ok(screen.getByText(`${legacyCatalogFacetFixture.total}개 상품`));
+});
+
+test("legacy drawer hides all populated cask axes while catalog terms/ranges remain operable and reset clears the deep-link state", async () => {
+  const { impl, calls } = makeCatalogFetch({
+    list: [multiMarketProduct],
+    facets: legacyCatalogFacetFixtureWithCask,
+  });
+  renderCatalog({
+    fetch: impl,
+    version: "legacy",
+    initialSearch:
+      "cask_family=ex_bourbon&cask_type=hogshead&cask_material=oak&market=market-a",
+  });
+
+  await screen.findByText("글로프우드 12년");
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: /필터/ }));
+
+  for (const section of ["캐스크", "캐스크 타입", "캐스크 재질"]) {
+    assertAbsent(screen.queryByRole("button", { name: new RegExp(`^${section}`) }));
+  }
+  for (const option of [
+    "버번 캐스크 (ex_bourbon)",
+    "셰리 캐스크 (sherry)",
+    "혹스헤드 (hogshead)",
+    "배럴 (barrel)",
+    "오크 (oak)",
+  ]) {
+    assertAbsent(screen.queryByText(option));
+  }
+
+  const marketSection = screen.getByRole("button", { name: /^마켓/ });
+  await user.click(marketSection);
+  const market = screen.getByRole("checkbox", { name: /^예시 마켓/ }) as HTMLInputElement;
+  assert.equal(market.checked, true);
+
+  await user.click(screen.getByRole("button", { name: /^주종/ }));
+  const spirit = screen.getByRole("checkbox", {
+    name: /^싱글 몰트 \(single_malt\)/,
+  }) as HTMLInputElement;
+  assert.equal(spirit.checked, false);
+  await user.click(spirit);
+  assert.equal(spirit.checked, true);
+
+  await user.click(screen.getByRole("button", { name: /^숙성 \/ 도수/ }));
+  assert.ok(screen.getByPlaceholderText(/^숙성/));
+  assert.ok(screen.getByPlaceholderText(/^도수/));
+
+  const initialFacetCall = calls.find((url) => url.includes("/api/products/facets"));
+  assert.ok(initialFacetCall);
+  const initialParams = new URL(initialFacetCall).searchParams;
+  assert.equal(initialParams.get("cask_family"), "ex_bourbon");
+  assert.equal(initialParams.get("cask_type"), "hogshead");
+  assert.equal(initialParams.get("cask_material"), "oak");
+
+  await user.click(screen.getByRole("button", { name: "초기화" }));
+  await waitFor(() => {
+    const latestFacetCall = [...calls]
+      .reverse()
+      .find((url) => url.includes("/api/products/facets"));
+    assert.ok(latestFacetCall);
+    const params = new URL(latestFacetCall).searchParams;
+    assert.equal(params.has("cask_family"), false);
+    assert.equal(params.has("cask_type"), false);
+    assert.equal(params.has("cask_material"), false);
+    assert.equal(params.has("market"), false);
+    assert.equal(params.has("spirit_type"), false);
+  });
 });
 
 test("pagination: previous is disabled on the first page, next is disabled on a final partial page", async () => {

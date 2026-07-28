@@ -10,11 +10,25 @@ import axe from "axe-core";
 import { ProductFacetPanel } from "../app/components/ProductFacetPanel";
 import type { FacetGroupV2, FacetResponseV2 } from "../app/lib/api/facet-contract";
 import type { ProductQueryState } from "../app/lib/api/product-query";
-import { catalogFacetV2Fixture, marketFacetV2Fixture } from "./fixtures/facet-responses";
+import {
+  catalogFacetV2Fixture,
+  catalogFacetV2FixtureWithCask,
+  marketFacetV2Fixture,
+} from "./fixtures/facet-responses";
 
 afterEach(() => {
   cleanup();
 });
+
+/**
+ * `assert.equal(node, null)` on a failing (non-null) match forces Node's assert
+ * module to `util.inspect` a live jsdom element for the diff message, which is
+ * prohibitively slow given jsdom's circular window/document graph. Comparing
+ * booleans keeps an absence check just as strict without that failure-path cost.
+ */
+function assertAbsent(element: unknown, message?: string): void {
+  assert.equal(element === null, true, message);
+}
 
 /**
  * A real caller's `selection` prop always agrees with whatever produced the
@@ -200,6 +214,9 @@ test("a selected facet marked relevant:false stays represented and clearable", (
 });
 
 test("server labels render generically for an unfamiliar fixture without a code change", () => {
+  // Model a forward-compatible server key without widening the generated
+  // union. The runtime renderer remains generic while contract code stays
+  // untouched; only the three exact cask keys are presentation-hidden.
   const exotic = {
     version: "2",
     total: 1,
@@ -208,22 +225,133 @@ test("server labels render generically for an unfamiliar fixture without a code 
     groups: [
       {
         kind: "terms",
-        key: "cask_type",
+        key: "experimental_finish",
         label: "Zzyzx Vessel Class",
         relevant: true,
-        query: { parameter: "cask_type", encoding: "repeat" },
+        query: { parameter: "experimental_finish", encoding: "repeat" },
         selection_mode: "multiple",
         selected: [],
-        options: [{ value: "glorp", label: "Glorpwood 캐스크", count: 4, selected: false }],
+        options: [{ value: "glorp", label: "Glorpwood 특별판", count: 4, selected: false }],
       },
     ],
-  } as const satisfies FacetResponseV2;
+  } as unknown as FacetResponseV2;
 
   render(<Harness response={exotic} />);
   fireEvent.click(screen.getByRole("button", { name: /필터/ }));
 
   assert.ok(screen.getByText("Zzyzx Vessel Class"));
-  assert.ok(screen.getByRole("checkbox", { name: "Glorpwood 캐스크" }));
+  assert.ok(screen.getByRole("checkbox", { name: "Glorpwood 특별판" }));
+});
+
+test("public cask facet groups render no section, label, option, count, or dependency label, regardless of relevance, selection, or response order", () => {
+  render(<Harness response={catalogFacetV2FixtureWithCask} />);
+  fireEvent.click(screen.getByRole("button", { name: /필터/ }));
+
+  for (const heading of ["캐스크", "캐스크 타입", "캐스크 재질"]) {
+    assertAbsent(screen.queryByText(heading), `${heading} heading should not render`);
+  }
+  for (const key of ["cask_family", "cask_type", "cask_material"]) {
+    assertAbsent(
+      document.querySelector(`[aria-labelledby="facet-${key}-label"]`),
+      `${key} stable-key group should not render`,
+    );
+  }
+  for (const optionLabel of ["버번 캐스크", "셰리 캐스크", "혹스헤드", "배럴", "오크"]) {
+    assertAbsent(
+      screen.queryByRole("checkbox", { name: optionLabel }),
+      `${optionLabel} option should not render`,
+    );
+  }
+  assertAbsent(screen.queryByText("예시 캐스크 상위"), "cask dependency label should not render");
+});
+
+test("visibility uses stable keys rather than display text, so a non-cask group labelled 캐스크 still renders", () => {
+  const nonCaskWithCaskLabel = {
+    ...catalogFacetV2Fixture,
+    groups: catalogFacetV2Fixture.groups.map((group) =>
+      group.kind === "terms" && group.key === "limited"
+        ? {
+            ...group,
+            label: "캐스크",
+            selected: [],
+            options: [
+              {
+                value: "limited",
+                label: "표시되어야 하는 비캐스크 옵션",
+                count: 7,
+                selected: false,
+              },
+            ],
+          }
+        : group,
+    ),
+  } as FacetResponseV2;
+
+  render(<Harness response={nonCaskWithCaskLabel} />);
+  fireEvent.click(screen.getByRole("button", { name: /필터/ }));
+
+  assert.ok(screen.getByText("캐스크"));
+  assert.ok(screen.getByRole("radio", { name: "표시되어야 하는 비캐스크 옵션" }));
+});
+
+test("non-cask groups remain present and operable while the fixture's cask groups stay hidden", async () => {
+  render(<Harness response={catalogFacetV2FixtureWithCask} />);
+  const { user } = await openDrawer();
+
+  const marketB = screen.getByRole("checkbox", { name: "보조 마켓" }) as HTMLInputElement;
+  assert.equal(marketB.checked, false);
+  await user.click(marketB);
+  assert.equal(marketB.checked, true);
+
+  assert.ok(screen.getByRole("checkbox", { name: "예시 증류소" }));
+  assert.ok(screen.getByRole("radio", { name: "한정판" }));
+  assert.ok(screen.getByRole("textbox", { name: /숙성 연수 최소/ }));
+});
+
+test("a hidden cask deep-link selection contributes to resettable state and global reset clears it", async () => {
+  render(
+    <Harness
+      response={catalogFacetV2FixtureWithCask}
+      initialSelection={{
+        cask_family: { kind: "terms", values: ["ex_bourbon"] },
+        cask_type: { kind: "terms", values: ["hogshead"] },
+        cask_material: { kind: "terms", values: ["oak"] },
+      }}
+    />,
+  );
+
+  const trigger = screen.getByRole("button", { name: /필터/ });
+  assert.ok(within(trigger).getByText("3"));
+  const { user } = await openDrawer();
+  await user.click(screen.getByRole("button", { name: "초기화" }));
+  assertAbsent(within(trigger).queryByText("3"));
+  assertAbsent(screen.queryByRole("checkbox", { name: "버번 캐스크" }));
+});
+
+test("a cask selection dropped from a refreshed response is not reconstructed as a retained, visible control", () => {
+  const { rerender } = render(
+    <Harness
+      response={catalogFacetV2FixtureWithCask}
+      initialSelection={{ cask_family: { kind: "terms", values: ["ex_bourbon"] } }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: /필터/ }));
+  assertAbsent(screen.queryByText("캐스크"));
+  assertAbsent(screen.queryByRole("checkbox", { name: "버번 캐스크" }));
+
+  const prunedFixture = {
+    ...catalogFacetV2FixtureWithCask,
+    groups: catalogFacetV2FixtureWithCask.groups.filter((g) => g.key !== "cask_family"),
+  } as FacetResponseV2;
+  rerender(
+    <Harness
+      response={prunedFixture}
+      initialSelection={{ cask_family: { kind: "terms", values: ["ex_bourbon"] } }}
+    />,
+  );
+
+  assertAbsent(screen.queryByText("캐스크"));
+  assertAbsent(screen.queryByRole("checkbox", { name: "버번 캐스크" }));
 });
 
 test("dependency parents render as a breadcrumb associated with their child option", () => {
