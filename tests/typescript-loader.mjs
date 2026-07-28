@@ -4,6 +4,18 @@ import ts from "typescript";
 const TYPESCRIPT_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
 
 export async function resolve(specifier, context, nextResolve) {
+  if (specifier === "next/image") {
+    return {
+      url: new URL("./next-image.tsx", import.meta.url).href,
+      shortCircuit: true,
+    };
+  }
+  if (specifier === "next/link") {
+    return {
+      url: new URL("./next-link.tsx", import.meta.url).href,
+      shortCircuit: true,
+    };
+  }
   try {
     return await nextResolve(specifier, context);
   } catch (error) {

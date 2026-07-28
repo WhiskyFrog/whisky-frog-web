@@ -14,6 +14,7 @@
     "e2e:build:v2": "NEXT_PUBLIC_API_BASE_URL=https://mock-backend.e2e.invalid NEXT_PUBLIC_PRODUCT_API_VERSION=v2 next build",
     "e2e:build:legacy": "NEXT_PUBLIC_API_BASE_URL=https://mock-backend.e2e.invalid NEXT_PUBLIC_PRODUCT_API_VERSION=legacy next build",
     "e2e": "playwright test",
+    "e2e:homepage": "npm run e2e:build:v2 && E2E_STATIC_BUILD=1 playwright test e2e/homepage.spec.ts",
     "e2e:full": "npm run e2e:build:v2 && PW_VERSION=v2 npm run e2e",
     "e2e:v2": "npm run e2e:build:v2 && PW_VERSION=v2 npm run e2e -- --grep @critical",
     "e2e:legacy": "npm run e2e:build:legacy && PW_VERSION=legacy npm run e2e -- --grep @critical"

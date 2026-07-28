@@ -3,13 +3,9 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * Browser-level production-build smoke suite (task-0007 acceptance criterion 3-4).
  *
- * This suite is NOT executed by the Implementer Worker session that authored it: the
- * Task Loop's hard rules for this session forbid starting servers/daemons/background
- * processes, and exercising this suite requires a running production build
- * (`next build` + `next start`) for Playwright to navigate against. Every scenario here is
- * real, runnable code — an operator or CI runs it via the `e2e:*` package.json scripts
- * (see plans/facet-v2-web-migration/RUNBOOK.md), which is also where the two
- * forced-configuration (v2/legacy) production-build runs happen.
+ * The focused homepage command serves the prerendered production HTML and its assets
+ * directly from Playwright routing, so it does not need a persistent server. The broader
+ * catalog/market suite continues to exercise a production Next server.
  *
  * Two viewport "narrow"/"wide" projects satisfy the AC's two viewport classes. No retries:
  * a flaky pass must not be mistaken for a genuine one, and this suite must never mask
@@ -23,7 +19,11 @@ export default defineConfig({
   retries: 0,
   reporter: [["list"]],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    baseURL:
+      process.env.E2E_BASE_URL ??
+      (process.env.E2E_STATIC_BUILD === "1"
+        ? "http://homepage.e2e.local"
+        : "http://localhost:3000"),
     trace: "retain-on-failure",
   },
   projects: [
@@ -41,7 +41,7 @@ export default defineConfig({
       use: { viewport: { width: 1280, height: 800 } },
     },
   ],
-  webServer: process.env.E2E_BASE_URL
+  webServer: process.env.E2E_BASE_URL || process.env.E2E_STATIC_BUILD === "1"
     ? undefined
     : {
         // Serves whichever production build is currently on disk under .next — the
